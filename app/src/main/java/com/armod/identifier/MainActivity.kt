@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,9 +18,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.armod.identifier.ocr.MlKitOcrProcessor
+import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.ui.navigation.Screen
 import com.armod.identifier.ui.screens.LiveScanScreen
 import com.armod.identifier.ui.screens.PermissionScreen
+import com.armod.identifier.ui.screens.ReviewOcrScreen
 import com.armod.identifier.ui.screens.ScanGuidanceScreen
 import com.armod.identifier.ui.screens.WelcomeScreen
 import com.armod.identifier.ui.theme.ARMedicineIdentifierTheme
@@ -43,7 +47,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
+    val ocrProcessor = remember { MlKitOcrProcessor() }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
+    var currentOcrResult by remember { mutableStateOf<OcrResult?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            ocrProcessor.close()
+        }
+    }
 
     when (currentScreen) {
         Screen.Welcome -> {
@@ -96,8 +108,30 @@ fun AppNavigation() {
                 currentScreen = Screen.ScanGuidance
             }
             LiveScanScreen(
+                ocrProcessor = ocrProcessor,
+                onOcrResult = { result ->
+                    currentOcrResult = result
+                    currentScreen = Screen.ReviewOcr
+                },
                 onBackClick = {
                     currentScreen = Screen.ScanGuidance
+                }
+            )
+        }
+
+        Screen.ReviewOcr -> {
+            val result = currentOcrResult ?: OcrResult(rawText = "")
+            BackHandler {
+                currentScreen = Screen.LiveScan
+            }
+            ReviewOcrScreen(
+                ocrResult = result,
+                onScanAnotherClick = {
+                    currentOcrResult = null
+                    currentScreen = Screen.LiveScan
+                },
+                onBackClick = {
+                    currentScreen = Screen.LiveScan
                 }
             )
         }

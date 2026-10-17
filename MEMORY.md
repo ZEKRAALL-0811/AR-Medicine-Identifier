@@ -76,49 +76,75 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 3 Camera Permissions & Capture Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Post-Crash Recovery & Phase 4 On-Device OCR Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git repo active, clean build, CameraX pipeline verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git repo active, clean build, OCR pipeline verified on physical hardware)`
 
-**Current milestone:** `Phase 3 — Camera Permissions and Capture Complete & Verified on Hardware`
+**Current milestone:** `Phase 4 — On-Device OCR Pipeline Complete & Verified on Hardware`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- Phase 2 debug APK was installed and launched successfully on Redmi Note 11.
-- `android.permission.CAMERA` and camera hardware feature declared in `AndroidManifest.xml` (zero network permissions).
-- CameraX dependencies integrated (`camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view` version 1.4.1).
-- `CameraCaptureManager` implemented for lifecycle-aware preview and strictly on-device in-memory image capture with immediate `ImageProxy.close()`.
-- Minimal high-contrast framing guide overlay (`CameraFramingOverlay`) implemented.
-- Compose navigation flow connecting Welcome (S01), Permission / Readiness (S02), Scan Guidance (S03), and Live Scan (S04) with predictable back navigation.
-- Runtime camera permission flow verified on physical hardware: handles initial request, granted transition, denied state without crashing, and guidance screen with "Try again" / "Open App Settings".
-- Live camera preview and frame capture physically verified on hardware: successfully streamed camera preview and captured 2448 × 3264 px frame.
-- Automated tests: `CameraStateTest` (3 test cases passed), `MedicineDataValidationTest` (9 test cases passed), `BaselineUnitTest` (1 test case passed). Total 13 tests passed in `./gradlew test`.
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (11,856,070 bytes) and installed onto physical hardware via ADB.
+- On-device ML Kit Text Recognition v2 (`com.google.mlkit:text-recognition:16.0.1`) integrated into build and version catalog.
+- Zero network dependencies / permissions: confirmed `android.permission.INTERNET` remains absent from manifest; ML Kit operates 100% on-device.
+- `OcrProcessor` interface and `MlKitOcrProcessor` implemented with lifecycle awareness, background thread execution via `Dispatchers.Default`, and guaranteed `ImageProxy.close()` to prevent memory leaks.
+- Structured domain models: `OcrResult`, `OcrBlock`, `OcrLine`, `OcrBoundingBox` decoupling OCR from UI and downstream matching.
+- Pure JVM utility `TextNormaliser`: whitespace collapsing, noisy line stripping, printed expiry date regex (`extractExpiryCandidate`), batch code regex (`extractBatchCandidate`), and synthetic result generator.
+- Screen S06 (`ReviewOcrScreen`) implemented: displays raw recognized text, detected lines with indices, candidate chips for expiry/batch markers, empty/unreadable feedback card, "Scan another package", and "Back" navigation.
+- Screen S04 (`LiveScanScreen`) connected: `captureImageProxy` wires camera frame capture to `ocrProcessor.processImage` with `reading_label` progress spinner.
+- Navigation wired in `MainActivity`: manages `MlKitOcrProcessor` lifecycle via `DisposableEffect` and navigates between LiveScan (S04) and ReviewOcr (S06).
+- Automated tests: Total 20 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`).
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (55,285,051 bytes, bundling Latin OCR model).
+- Physical hardware verification: Deployed to Redmi Note 11; tested with real medicine packages:
+  - Calcium + Vitamin D3 package: 33 lines, 19 blocks recognized; batch code T535 extracted.
+  - Dr. Reddy's Omeprazole 20mg package: 45 lines, 22 blocks recognized.
+  - Active screen on physical device verified in recovery session via `screencap`.
 
 **Partially implemented:**
-- Full medicine identification pipeline: Camera frame capture is complete, but ML Kit OCR extraction (Phase 4), matching engine (Phase 5), text-to-speech guidance (Phase 6), and AR overlay (Phase 7) are yet to be integrated.
+- Full medicine identification pipeline: Camera frame capture (Phase 3) and OCR extraction (Phase 4) are complete. Local candidate matching (Phase 5), text-to-speech guidance (Phase 6), and AR overlay (Phase 7) are yet to be integrated.
 
 **Not yet implemented:**
-- Phase 4: On-device OCR pipeline (ML Kit Text Recognition v2).
-- Phases 5–9: Field extraction, local matching, speech guidance, AR/2D fallback, integration, and final testing.
+- Phases 5–9: Field extraction & local matching, speech guidance, AR/2D fallback, integration, and final testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 11,856,070 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL (45 tasks executed; all 13 unit tests passed)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 16s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 55,285,051 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 17s (45 tasks executed; all 20 unit tests passed)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
-- Camera hardware test: Verified live streaming and 2448 × 3264 px frame capture on hardware.
+- Live OCR test: Verified on physical Redmi Note 11 against printed medicine packages.
 
-**Current task in progress:** `Phase 3 complete and device verified; awaiting user approval to begin Phase 4.`
+**Current task in progress:** `Phase 4 complete and device verified; post-crash state recovered; awaiting user approval to begin Phase 5.`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Implemented CameraX capture and preview, S01–S04 screens, verified live camera feed and capture on Redmi Note 11, and passed all unit tests.`
+**Most recent change:** `Recovered project state after sudden laptop shutdown, verified Phase 4 OCR pipeline on physical Redmi Note 11 with 20/20 unit tests passing, updated DECISIONS.md and TASKS.md.`
 
-**Next step:** `Obtain user approval for Phase 3 report, then proceed to Phase 4 (On-device OCR pipeline using ML Kit Text Recognition v2).`
+**Next step:** `Obtain user approval for Phase 4 report, then proceed to Phase 5 (Field extraction, local matching, and confidence gate).`
 
 ## 6. Session Log
+
+### 2026-10-17 — Phase 4: On-Device OCR Pipeline & Crash Recovery (Verified on Redmi Note 11)
+- Goal: Recover project state after unexpected laptop shutdown; verify actual state of working directory, build artifacts, and physical device; complete Phase 4 on-device OCR pipeline and verification.
+- Files changed: `gradle/libs.versions.toml`, `app/build.gradle.kts`, `app/src/main/res/values/strings.xml`, `app/src/main/java/com/armod/identifier/camera/CameraCaptureManager.kt`, `app/src/main/java/com/armod/identifier/ocr/OcrResult.kt`, `app/src/main/java/com/armod/identifier/ocr/OcrProcessor.kt`, `app/src/main/java/com/armod/identifier/ocr/MlKitOcrProcessor.kt`, `app/src/main/java/com/armod/identifier/ocr/OcrState.kt`, `app/src/main/java/com/armod/identifier/ui/navigation/Screen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/LiveScanScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ReviewOcrScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `app/src/main/java/com/armod/identifier/util/TextNormaliser.kt`, `app/src/test/java/com/armod/identifier/ocr/OcrPipelineUnitTest.kt`, `MEMORY.md`, `DECISIONS.md`, `TASKS.md`.
+- Implemented and verified:
+  - Environment audit: OpenJDK 21.0.10, Android SDK 36.1, Gradle 8.11.1 Wrapper, and physical Redmi Note 11 (ADB ID `79145af9`, API 33) intact and operational.
+  - File integrity: All uncommitted files from the pre-crash session were inspected; no file truncation, corruption, or syntax errors found.
+  - Added `com.google.mlkit:text-recognition:16.0.1` and implemented `MlKitOcrProcessor` with zero network permissions.
+  - Built pure JVM domain models and utilities (`OcrResult`, `TextNormaliser`) and comprehensive test suite (`OcrPipelineUnitTest`).
+  - Added Screen S06 `ReviewOcrScreen` and integrated with `LiveScanScreen` capture flow.
+  - Automated tests: Ran `.\gradlew.bat test` -> 20/20 unit tests passed cleanly (45 tasks executed).
+  - Build output: Ran `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 16s (55.2 MB APK).
+  - Physical device verification: Installed and verified on Redmi Note 11 hardware; pulled screenshots of live OCR recognition on real medicine packages (Dr. Reddy's Omeprazole 20mg, Calcium + Vitamin D3) and verified active foreground app via ADB.
+- Commands/builds/tests run and outcomes:
+  - `adb devices -l`: Verified device `79145af9` (Redmi Note 11, API 33).
+  - `.\gradlew.bat test`: BUILD SUCCESSFUL in 17s (45 tasks). 20/20 tests passed.
+  - `.\gradlew.bat assembleDebug`: BUILD SUCCESSFUL in 16s (35 tasks).
+  - `adb shell "dumpsys window | grep ..."`: Confirmed `com.armod.identifier.MainActivity` active in foreground.
+  - Screencap inspection: Verified real medicine packaging OCR outputs.
+- Device checks performed: Verified on physical Redmi Note 11 hardware via USB.
+- Decisions made (and why): Accepted D-023 (ML Kit Text Recognition v2 16.0.1 for on-device OCR pipeline).
+- Current task remaining: Wait for user approval of Phase 4 report before starting Phase 5.
+- Next step: Phase 5 — Field extraction, local matching, and confidence gate.
 
 ### 2026-10-17 — Phase 3: Camera Permissions and Capture (Verified on Redmi Note 11)
 - Goal: Connect physical Redmi Note 11, install Phase 2 APK, implement CameraX capture and runtime permissions, test live preview and capture on device.

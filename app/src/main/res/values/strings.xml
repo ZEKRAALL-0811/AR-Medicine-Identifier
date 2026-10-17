@@ -22,4 +22,9 @@
     <string name="camera_error">Camera unavailable</string>
     <string name="retry">Retry</string>
     <string name="disclaimer_academic">Academic Proof of Concept — Not for clinical or diagnostic use.</string>
+    <string name="ocr_review_title">Recognized Package Text</string>
+    <string name="ocr_no_text_title">No Readable Text Found</string>
+    <string name="ocr_no_text_desc">The camera could not detect clear printed text on this frame. Ensure the medicine label is steady, 15–25 cm away, with good lighting.</string>
+    <string name="scan_another">Scan another package</string>
+    <string name="reading_label">Reading label…</string>
 </resources>

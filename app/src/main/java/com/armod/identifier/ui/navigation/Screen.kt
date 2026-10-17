@@ -9,6 +9,7 @@ sealed class Screen(val route: String) {
     data object ScanGuidance : Screen("scan_guidance")
     data object LiveScan : Screen("live_scan")
     data object Recognising : Screen("recognising")
+    data object ReviewOcr : Screen("review_ocr")
     data object Result : Screen("result")
     data object Confirmation : Screen("confirmation")
     data object Unknown : Screen("unknown")

@@ -171,15 +171,36 @@
 **Rationale:** Ensures compile-time typesafety without reflection overhead. Executes natively in standard JVM unit tests without needing Android framework mocks (unlike `org.json`). Allows strict validation of required fields (`id`, `sourceTitle`, `datasetVersion`) and safe handling of optional/unknown attributes.  
 **Constraint:** Keep dataset parsing offline and self-contained; do not introduce remote network parsers or cloud schemas.
 
+### D-021 — Use connected Redmi Note 11 (Android 13 / API 33) as temporary development and testing device
+
+**Status:** Accepted  
+**Decision:** Use connected Redmi Note 11 (Model 2201117TI, Android 13, API 33) for interim development and physical-device verification while primary target Samsung Galaxy F13 is unavailable.  
+**Rationale:** Explicit user authorization; device physically connected via USB debugging with verified installation and hardware camera access. Local emulator is blocked by disabled CPU virtualization in host BIOS.  
+**Constraint:** Retain minSdk 26 compatibility for primary target baseline.
+
+### D-022 — Standardize on CameraX 1.4.1 with on-device in-memory image capture
+
+**Status:** Accepted  
+**Decision:** Use `androidx.camera:camera-core:1.4.1`, `camera-camera2:1.4.1`, `camera-lifecycle:1.4.1`, `camera-view:1.4.1` with `ProcessCameraProvider` and `AndroidView(PreviewView)`. Frames captured on-device with immediate `ImageProxy.close()`.  
+**Rationale:** Robust compatibility with AGP 8.7.3, Compose BOM 2024.11.00, compileSdk 35, and hardware acceleration on physical Redmi Note 11 (Android 13 / API 33).  
+**Constraint:** Never store raw camera frames to persistent storage or upload them; close ImageProxy immediately.
+
+### D-023 — Standardize on ML Kit Text Recognition v2 (16.0.1) for on-device OCR pipeline
+
+**Status:** Accepted  
+**Decision:** Use `com.google.mlkit:text-recognition:16.0.1` (Latin script) with `InputImage.fromMediaImage` and lifecycle-managed `TextRecognizer` instance.  
+**Rationale:** Runs completely on-device with zero network permissions (`android.permission.INTERNET` absent from manifest). Zero cloud model download dependency. Successfully verified on physical Redmi Note 11 hardware with real medicine packages.  
+**Constraint:** OCR output is transient in memory. Bounding boxes, lines, and blocks are extracted into pure Kotlin domain models (`OcrResult`, `OcrBlock`, `OcrLine`) to decouple OCR recognition from UI and matching logic.
+
 ## 4. Explicitly Unresolved / Must Be Verified
 
 These items are not settled facts and must not be silently treated as verified:
 
 - Whether the exact Samsung Galaxy F13 model/software setup supports the selected ARCore implementation.
-- Whether the selected ML Kit dependency/model works correctly with the project's final Android configuration.
+- Whether the selected ML Kit dependency/model works correctly with the project's final Android configuration (RESOLVED in Phase 4: verified with on-device `com.google.mlkit:text-recognition:16.0.1` on physical hardware).
 - The final Android `minSdk` after checking the real dependency graph and device (API 26 confirmed for Phase 1 baseline).
 - The final list of 20–30 medicine test records and the source/licence for each fact (RESOLVED in Phase 2: 25 curated records with full provenance in `docs/dataset-sources.md`).
-- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability.
+- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability (OCR baseline verified in Phase 4; matching and AR remain to be evaluated).
 - Whether local scan history, Room, WorkManager reminders, or automatic point-and-hold scanning fit the remaining time.
 - Whether any optional AR feature has been tested on the physical target device.
 
@@ -188,6 +209,17 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 ## 5. Decision Change Log
 
 Append new changes at the top. Do not delete superseded decisions.
+
+### 2026-10-17 — D-023 — Standardize on ML Kit Text Recognition v2 (16.0.1) for on-device OCR pipeline
+- Previous decision: Provisional ML Kit Text Recognition v2 planned without pinned version.
+- Proposed replacement: Use `com.google.mlkit:text-recognition:16.0.1` with `InputImage.fromMediaImage` and pure domain mapping (`OcrResult`).
+- Reason / evidence: Zero network permissions, fully on-device, verified against real medicine packaging on physical Redmi Note 11 hardware.
+- User approval required: No (implements approved D-006).
+- User approval/status: Accepted.
+- Files and architecture affected: `gradle/libs.versions.toml`, `app/build.gradle.kts`, `OcrProcessor.kt`, `MlKitOcrProcessor.kt`, `OcrResult.kt`, `LiveScanScreen.kt`, `ReviewOcrScreen.kt`.
+- Migration or cleanup required: None.
+- Verification performed: Unit tests in `OcrPipelineUnitTest` (7/7 passed), debug APK built (55.2 MB), physically verified on Redmi Note 11 with Omeprazole 20mg and Calcium + D3 packages.
+- New status: Accepted.
 
 ### 2026-10-17 — D-022 — Standardize on CameraX 1.4.1 with on-device in-memory image capture
 - Previous decision: Provisional CameraX dependency planned without exact version.

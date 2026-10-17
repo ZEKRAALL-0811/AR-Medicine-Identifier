@@ -100,6 +100,34 @@ class CameraCaptureManager(private val context: Context) {
     }
 
     /**
+     * Captures a single image frame and delivers the ImageProxy directly to the OCR pipeline.
+     * The consumer is responsible for processing and closing the ImageProxy.
+     */
+    fun captureImageProxy(
+        executor: Executor,
+        onCaptured: (ImageProxy) -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        val capture = imageCapture ?: run {
+            onError(IllegalStateException("Camera capture is not initialized or bound"))
+            return
+        }
+
+        capture.takePicture(
+            executor,
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    onCaptured(image)
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    onError(exception)
+                }
+            }
+        )
+    }
+
+    /**
      * Unbinds all CameraX use cases and releases camera hardware resources.
      */
     fun unbind() {

@@ -19,8 +19,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -29,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,34 +38,42 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.armod.identifier.R
 import com.armod.identifier.camera.CameraCaptureManager
 import com.armod.identifier.camera.CameraFramingOverlay
 import com.armod.identifier.camera.CameraPreviewView
 import com.armod.identifier.camera.CameraState
+import com.armod.identifier.ocr.OcrProcessor
+import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.ui.theme.PrimaryBlue
 import com.armod.identifier.ui.theme.StatusError
 import com.armod.identifier.ui.theme.StatusSuccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Screen S04 — Live Scan / Camera Preview and Capture
+ * Screen S04 — Live Scan / Camera Preview and Capture with On-Device OCR Pipeline
  * Follows Document 03 (App Flow) & Document 04 (UI/UX Design Brief):
  * - Live CameraX preview with hardware acceleration
  * - Minimal high-contrast framing brackets
  * - Large accessible capture button (56dp min height)
- * - Safe on-device capture without network transmission
- * - Immediate loading, success, and error feedback states
+ * - Safe on-device OCR recognition off the main UI thread
+ * - Immediate loading, recognition, and error feedback states
  */
 @Composable
 fun LiveScanScreen(
+    ocrProcessor: OcrProcessor,
+    onOcrResult: (OcrResult) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val captureManager = remember { CameraCaptureManager(context) }
     var cameraState by remember { mutableStateOf<CameraState>(CameraState.Initializing) }
+    var isReadingLabel by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -110,6 +117,7 @@ fun LiveScanScreen(
                                 Button(
                                     onClick = {
                                         cameraState = CameraState.Initializing
+                                        isReadingLabel = false
                                     },
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -196,21 +204,19 @@ fun LiveScanScreen(
                                     .size(8.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        when (state) {
-                                            is CameraState.Ready -> StatusSuccess
-                                            is CameraState.Capturing -> Color.Yellow
-                                            is CameraState.Captured -> StatusSuccess
+                                        when {
+                                            isReadingLabel -> Color.Yellow
+                                            state is CameraState.Ready -> StatusSuccess
                                             else -> Color.Gray
                                         }
                                     )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = when (state) {
-                                    is CameraState.Initializing -> "Starting camera…"
-                                    is CameraState.Ready -> "Ready to scan"
-                                    is CameraState.Capturing -> "Capturing frame…"
-                                    is CameraState.Captured -> "Frame captured"
+                                text = when {
+                                    isReadingLabel -> stringResource(id = R.string.reading_label)
+                                    state is CameraState.Initializing -> "Starting camera…"
+                                    state is CameraState.Ready -> "Ready to scan"
                                     else -> "Camera"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
@@ -221,7 +227,7 @@ fun LiveScanScreen(
                     }
                 }
 
-                // Bottom Controls: Capture button or Captured feedback
+                // Bottom Controls: Large capture action button
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -229,103 +235,68 @@ fun LiveScanScreen(
                         .padding(bottom = 32.dp, start = 24.dp, end = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (state is CameraState.Captured) {
-                        // Capture confirmation card
-                        Card(
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xEE18232D)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "✓ ${stringResource(id = R.string.capture_success)}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = StatusSuccess,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Resolution: ${state.imageWidth} × ${state.imageHeight} px (${state.rotationDegrees}° rotation)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.8f)
-                                )
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                cameraState = CameraState.Ready
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                        ) {
-                            Text(
-                                text = stringResource(id = R.string.capture_another),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    } else {
-                        // Capture action button
-                        Button(
-                            onClick = {
-                                if (state is CameraState.Ready) {
-                                    cameraState = CameraState.Capturing
-                                    captureManager.captureImage(
-                                        executor = ContextCompat.getMainExecutor(context),
-                                        onCaptured = { width, height, rotation ->
-                                            cameraState = CameraState.Captured(
-                                                imageWidth = width,
-                                                imageHeight = height,
-                                                rotationDegrees = rotation
-                                            )
-                                        },
-                                        onError = { error ->
-                                            cameraState = CameraState.Error(
-                                                message = error.localizedMessage ?: "Image capture failed"
-                                            )
+                    Button(
+                        onClick = {
+                            if (state is CameraState.Ready && !isReadingLabel) {
+                                isReadingLabel = true
+                                captureManager.captureImageProxy(
+                                    executor = ContextCompat.getMainExecutor(context),
+                                    onCaptured = { imageProxy ->
+                                        coroutineScope.launch(Dispatchers.Default) {
+                                            try {
+                                                val ocrResult = ocrProcessor.processImage(imageProxy)
+                                                withContext(Dispatchers.Main) {
+                                                    isReadingLabel = false
+                                                    onOcrResult(ocrResult)
+                                                }
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) {
+                                                    isReadingLabel = false
+                                                    cameraState = CameraState.Error(
+                                                        message = e.localizedMessage ?: "OCR recognition failed"
+                                                    )
+                                                }
+                                            }
                                         }
-                                    )
-                                }
-                            },
-                            enabled = state is CameraState.Ready,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryBlue,
-                                disabledContainerColor = PrimaryBlue.copy(alpha = 0.5f)
-                            )
-                        ) {
-                            if (state is CameraState.Capturing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = stringResource(id = R.string.capturing),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(id = R.string.capture_button),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    },
+                                    onError = { error ->
+                                        isReadingLabel = false
+                                        cameraState = CameraState.Error(
+                                            message = error.localizedMessage ?: "Image capture failed"
+                                        )
+                                    }
                                 )
                             }
+                        },
+                        enabled = state is CameraState.Ready && !isReadingLabel,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryBlue,
+                            disabledContainerColor = PrimaryBlue.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        if (isReadingLabel) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(id = R.string.reading_label),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(id = R.string.capture_button),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
                         }
                     }
                 }

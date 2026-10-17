@@ -122,20 +122,32 @@
 
 ## Phase 4 — On-device OCR pipeline
 
-- [ ] Integrate ML Kit Text Recognition v2 for on-device text recognition.
-- [ ] Process a captured image and return recognized text plus useful text-block/line structure where available.
-- [ ] Add progress/loading state and a way to cancel or retry.
-- [ ] Handle empty, blurry, low-light, rotated, or unreadable captures with honest feedback.
-- [ ] Keep OCR output transient unless the user explicitly chooses an approved local-history feature.
-- [ ] Add unit tests for text normalization and field extraction using representative sample OCR strings.
+- [x] Integrate ML Kit Text Recognition v2 for on-device text recognition.
+- [x] Process a captured image and return recognized text plus useful text-block/line structure where available.
+- [x] Add progress/loading state and a way to cancel or retry.
+- [x] Handle empty, blurry, low-light, rotated, or unreadable captures with honest feedback.
+- [x] Keep OCR output transient unless the user explicitly chooses an approved local-history feature.
+- [x] Add unit tests for text normalization and field extraction using representative sample OCR strings.
 
 **Phase verification**
-- [ ] OCR works on representative labelled medicine-package images.
-- [ ] Empty/unreadable input produces a clear recovery message.
-- [ ] OCR runs on-device without a cloud dependency.
-- [ ] Text extraction tests pass.
+- [x] OCR works on representative labelled medicine-package images (verified live on Redmi Note 11 with Calcium + D3 and Dr. Reddy's Omeprazole 20mg).
+- [x] Empty/unreadable input produces a clear recovery message (verified via S06 empty state card and automated tests).
+- [x] OCR runs on-device without a cloud dependency (ML Kit Latin script model, zero network calls, no INTERNET permission).
+- [x] Text extraction tests pass (all 7 unit tests in `OcrPipelineUnitTest` passed).
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Pinned `com.google.mlkit:text-recognition:16.0.1` in `gradle/libs.versions.toml` and `app/build.gradle.kts`. Confirmed `android.permission.INTERNET` remains absent from manifest.
+- Implemented `OcrProcessor` interface and `MlKitOcrProcessor` with `InputImage.fromMediaImage` and guaranteed `imageProxy.close()` on background `Dispatchers.Default`.
+- Structured output model in `OcrResult`: blocks (`OcrBlock`), lines (`OcrLine`), bounding boxes (`OcrBoundingBox`), dimensions, and line count.
+- Added candidate pattern regexes in `TextNormaliser` for printed expiry dates (`EXP`, `EXPIRY`, `USE BY`) and batch codes (`BATCH NO`, `LOT`, `B. NO`).
+- Implemented S06 `ReviewOcrScreen` with scrollable raw text, detected line breakdown, extracted candidate chips, empty/unreadable card, "Scan another package", and "Back" navigation.
+- Added `reading_label` loading state in `LiveScanScreen` with `CircularProgressIndicator`.
+- Automated tests: All 7 test cases in `OcrPipelineUnitTest` passed in `.\gradlew.bat test`. Total 20 tests pass across test suite (1 Baseline, 3 Camera, 9 Medicine, 7 OCR).
+- Build verification: `.\gradlew.bat assembleDebug` succeeds in 16s (APK size: 55,285,051 bytes including bundled ML Kit Latin OCR model).
+- Physical device verification: Installed and verified on Redmi Note 11 (Android 13 / API 33). Tested against real medicine packages:
+  - Calcium + Vitamin D3 package: 33 lines, 19 blocks, Batch code T535 detected.
+  - Dr. Reddy's Omeprazole 20mg package: 45 lines, 22 blocks recognized.
+  - Device active screen verified in recovery session via `screencap`.
 
 ## Phase 5 — Field extraction, local matching, and confidence gate
 
@@ -224,6 +236,6 @@
 
 ## Current blocker / next action
 
-**Next phase to execute:** Phase 3 — Permissions and camera foundation (no authentication) (pending user approval).  
-**Current implementation status:** Phase 2 complete and verified. Dataset (25 records) and validation tests passing.  
+**Next phase to execute:** Phase 5 — Field extraction, local matching, and confidence gate (pending user approval).  
+**Current implementation status:** Phase 4 (On-device OCR pipeline) complete and verified on physical Redmi Note 11 hardware. 20/20 unit tests passing.  
 **Do not pre-check any implementation task.**
