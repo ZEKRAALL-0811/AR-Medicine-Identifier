@@ -38,9 +38,9 @@
     <string name="purpose_title">Approved Purpose / Indication</string>
     <string name="medicine_result_title">Medicine Result</string>
     <string name="voice_guidance_title">Voice Guidance</string>
-    <string name="tts_speak">Listen to result</string>
-    <string name="tts_stop">Stop speech</string>
-    <string name="tts_repeat">Repeat speech</string>
+    <string name="tts_speak">Speak</string>
+    <string name="tts_stop">Stop</string>
+    <string name="tts_repeat">Repeat</string>
     <string name="tts_status_speaking">Speaking…</string>
     <string name="tts_status_idle">Ready to speak</string>
     <string name="tts_status_stopped">Speech stopped</string>

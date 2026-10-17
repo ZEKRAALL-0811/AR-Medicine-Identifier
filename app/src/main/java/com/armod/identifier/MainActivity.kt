@@ -37,13 +37,14 @@ import com.armod.identifier.ui.theme.ARMedicineIdentifierTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initialRoute = intent?.getStringExtra("initial_screen")
         setContent {
             ARMedicineIdentifierTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(initialRoute = initialRoute)
                 }
             }
         }
@@ -51,12 +52,31 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(initialRoute: String? = null) {
     val context = LocalContext.current
     val ocrProcessor = remember { MlKitOcrProcessor() }
     val medicineDataSource = remember { JsonMedicineLocalDataSource(context) }
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
-    var currentOcrResult by remember { mutableStateOf<OcrResult?>(null) }
+    val startingScreen = when (initialRoute) {
+        "result" -> Screen.Result
+        "review_ocr" -> Screen.ReviewOcr
+        else -> Screen.Welcome
+    }
+    var currentScreen by remember { mutableStateOf<Screen>(startingScreen) }
+    var currentOcrResult by remember {
+        mutableStateOf<OcrResult?>(
+            if (initialRoute == "result") {
+                OcrResult(
+                    rawText = "Omez 20mg Capsules Dr. Reddy's B.No: T535 EXP: 12/2027",
+                    lines = listOf(
+                        com.armod.identifier.ocr.OcrLine("Omez 20mg Capsules"),
+                        com.armod.identifier.ocr.OcrLine("Dr. Reddy's"),
+                        com.armod.identifier.ocr.OcrLine("B.No: T535"),
+                        com.armod.identifier.ocr.OcrLine("EXP: 12/2027")
+                    )
+                )
+            } else null
+        )
+    }
     var medicineCatalogue by remember { mutableStateOf<List<MedicineRecord>>(emptyList()) }
 
     LaunchedEffect(Unit) {

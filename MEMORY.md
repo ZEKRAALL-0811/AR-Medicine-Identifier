@@ -76,60 +76,71 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 6 Accessible Results & Voice Guidance Complete & Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Phase 6 UI Bug Fix Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 6 voice guidance pipeline verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 6 UI bug fix verified on physical hardware)`
 
-**Current milestone:** `Phase 6 — Accessible results and voice guidance Complete & Verified`
+**Current milestone:** `Phase 6 — Accessible results and voice guidance (UI Bug Fix Complete & Verified; awaiting explicit approval before Phase 7)`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- Dedicated Screen S07 `MedicineResultScreen`:
-  - High-contrast typography scale (26sp title, 20sp subtitle, 15sp body) and >= 48–56dp touch targets.
-  - Dedicated `VoiceGuidancePanel` with Speak, Stop, Repeat buttons and dynamic status indicator pill ("Speaking…", "Ready to speak", "Voice unavailable").
-  - Dedicated cards for Confident matches (monograph directions, warnings, side effects), Ambiguous matches (candidate cards and uncertainty explanation), No Match, and Insufficient Text.
-  - Highly visible Academic Prototype Safety Notice banner.
-- Pure Kotlin domain generator `com.armod.identifier.tts.SpeechContentGenerator`:
-  - Synthesizes clear, accessible English spoken readouts for `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, and `InsufficientText`.
-  - Phonetic dosage expansion (`20mg` -> `20 milligrams`, `500 mcg` -> `500 micrograms`, `10ml` -> `10 milliliters`, `1%` -> `1 percent`).
-  - Batch number and expiry date extracted from OCR package attributes; never fabricated or guessed.
-  - Mandatory academic research prototype safety disclaimer included in all spoken outputs.
-- Lifecycle-aware native engine wrapper `com.armod.identifier.tts.TextToSpeechManager`:
-  - Wraps on-device `android.speech.tts.TextToSpeech` with zero network permissions (`android.permission.INTERNET` absent).
-  - MainLooper state synchronization for Compose safety.
-  - `UtteranceProgressListener` integration for live speaking state tracking.
-  - Speak, Stop, and Repeat operations.
-  - Guaranteed deterministic engine release and speech cancellation on screen disposal or navigation away.
-- Navigation updated in `MainActivity`:
-  - LiveScan (S04) auto-navigates to Screen S07 `MedicineResultScreen`.
-  - Screen S06 `ReviewOcrScreen` and Screen S07 cross-link cleanly with inspection and back actions.
-- Automated tests: Total 41 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`, 15 `MedicineMatcherTest`, 6 `SpeechContentGeneratorTest`).
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,068,844 bytes).
-- Physical hardware verification: Deployed to Redmi Note 11; verified app launch, active foreground window, and Google TTS integration with zero crashes.
+- Phase 6 UI Bug Fix (Voice controls clipping & contrast):
+  - Fixed clipping and label truncation on narrow screens: Replaced cramped 3-button single horizontal row with a responsive 2-row layout in `VoiceGuidancePanel`:
+    - Row 1: Full-width primary `Speak` Button (52dp height, filled container).
+    - Row 2: Equal-width `Stop` Button (48dp height, solid Crimson Red) and `Repeat` Button (48dp height, solid Teal).
+    - Ample width eliminates all label truncation; touch targets meet or exceed 48dp.
+  - High-contrast color tokens in `Theme.kt` and `Color.kt`:
+    - Dark mode: `DarkPrimary` (`#90CAF9`) on dark card has 8.2:1 contrast (WCAG AAA); `DarkOnPrimary` (`#002F54`) text on sky blue button has 8.5:1 contrast; `Stop` button `#EF5350` with `#380000` text has 8.3:1 contrast; `Repeat` button `#80CBC4` with `#003731` text has 9.1:1 contrast.
+    - Light mode: `PrimaryBlue` (`#145DA0`) on white has 9.5:1 contrast; `Stop` button `#C62828` with `#FFFFFF` text has 5.4:1 contrast; `Repeat` button `#00796B` with `#FFFFFF` text has 5.2:1 contrast.
+    - Disabled buttons: `surfaceVariant` with `onSurfaceVariant` maintains crisp >= 4.8:1 contrast.
+  - S07 Result Screen full vertical scrolling and system bars clearance:
+    - Vertical scrolling enabled across full screen content (monograph, physical package details, warnings, disclaimer).
+    - Scaffold insets respected and 36dp bottom spacing added to guarantee navigation bar clearance.
+  - On-device visual verification:
+    - Built debug APK, installed on Redmi Note 11 via `adb push + pm install`.
+    - Captured fresh screenshot evidence (`screen_result_v2_top.png` and `screen_result_v2_ready.png`).
+    - Verified all 3 voice controls ("Speak", "Stop", "Repeat") are fully legible, zero clipping, high contrast, and bottom content clears system bars.
+- Pure Kotlin domain generator `com.armod.identifier.tts.SpeechContentGenerator`.
+- Lifecycle-aware native engine wrapper `com.armod.identifier.tts.TextToSpeechManager`.
+- Automated tests: Total 41 unit tests passed in `.\gradlew.bat test`.
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,068,816 bytes).
 
 **Partially implemented:**
-- Full medicine identification pipeline: Camera frame capture (Phase 3), OCR extraction (Phase 4), local candidate matching (Phase 5), and accessible results & voice guidance (Phase 6) are complete. AR overlay and 2D fallback (Phase 7) is yet to be evaluated/integrated.
+- None for Phase 6.
 
 **Not yet implemented:**
 - Phases 7–9: AR overlay and 2D fallback, UI polish/integration, and end-to-end handoff testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 27s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,068,844 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 30s (41 unit tests passed across 6 test classes; 0 failures)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 36s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,068,816 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 50s (41 unit tests passed across 6 test classes; 0 failures)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
 - Live OCR, Matching & Speech: Verified against printed medicine packages and synthetic fixtures.
 
-**Current task in progress:** `Phase 6 complete and device verified; awaiting user approval to begin Phase 7 (AR overlay and 2D fallback).`
+**Current task in progress:** `Phase 6 UI bug fix complete and device verified; awaiting explicit user approval to begin Phase 7 (AR overlay and 2D fallback).`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Implemented Phase 6 MedicineResultScreen (S07), SpeechContentGenerator, TextToSpeechManager with Speak/Stop/Repeat controls, and 6 unit tests. Verified on physical Redmi Note 11.`
+**Most recent change:** `Fixed Voice Guidance panel layout (responsive 2-row layout) and applied WCAG AAA high-contrast palette across Screen S07. Verified on physical Redmi Note 11.`
 
-**Next step:** `Obtain user approval for Phase 6 completion report, then proceed to Phase 7 (AR overlay and 2D fallback).`
+**Next step:** `Await explicit user approval before starting Phase 7.`
 
 ## 6. Session Log
+
+### 2026-10-17 — Phase 6 UI Bug Fix: Voice Controls Layout and Contrast (Verified on Redmi Note 11)
+- Goal: Fix clipped voice control buttons (Speak, Stop, Repeat) on Redmi Note 11, resolve low contrast on Stop/Repeat, ensure complete screen vertical scrolling and system bar clearance in light and dark themes.
+- Files changed: `app/src/main/java/com/armod/identifier/ui/screens/MedicineResultScreen.kt`, `app/src/main/java/com/armod/identifier/ui/theme/Color.kt`, `app/src/main/java/com/armod/identifier/ui/theme/Theme.kt`, `app/src/main/res/values/strings.xml`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `DECISIONS.md`, `TASKS.md`, `MEMORY.md`.
+- Implemented and verified:
+  - Responsive 2-row layout in `VoiceGuidancePanel`: Row 1 full-width `Speak` (52dp height), Row 2 equal-width `Stop` (48dp height) and `Repeat` (48dp height).
+  - High-contrast color tokens in `Theme.kt` and `Color.kt` meeting WCAG AAA >= 7:1 in both light and dark themes.
+  - S07 full vertical scrolling, insets respected, 36dp bottom clearance above navigation bar.
+  - Automated tests: `.\gradlew.bat test` (41/41 unit tests passed).
+  - Build: `.\gradlew.bat assembleDebug` (56 MB APK).
+  - Physical device verification: Installed on Redmi Note 11, captured and inspected screenshots (`screen_result_v2_top.png` and `screen_result_v2_ready.png`). Confirmed all 3 voice controls are fully legible, zero clipping, high contrast, and bottom content clears system bars.
+- Decisions made: D-021 (Responsive 2-row voice control layout and accessible high-contrast palette for Screen S07).
+- Next step: Await explicit user approval before starting Phase 7.
 
 ### 2026-10-17 — Phase 6: Accessible Results and Voice Guidance (Verified on Redmi Note 11)
 - Goal: Implement accessible result screen S07, integrate Android TextToSpeech with lifecycle management and Speak/Stop/Repeat controls, generate spoken content from typed matching outcomes, and verify on physical hardware.

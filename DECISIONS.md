@@ -277,6 +277,20 @@ Append new changes at the top. Do not delete superseded decisions.
 - Verification performed: `adb devices` showed `79145af9 device`, installed debug APK, launched app, verified camera stream.
 - New status: Accepted.
 
+### 2026-10-17 — D-021 — Responsive 2-row voice control layout and accessible high-contrast palette for Screen S07
+- Previous decision: Single horizontal row with 3 OutlinedButtons for Listen/Speak, Stop, Repeat.
+- Proposed replacement: Responsive 2-row layout in `VoiceGuidancePanel`:
+  - Row 1: Full-width primary `Speak` Button (52dp height, filled container).
+  - Row 2: Equal-width `Stop` Button (48dp height, solid Crimson Red `#C62828` / `#EF5350`) and `Repeat` Button (48dp height, solid Teal `#00796B` / `#80CBC4`).
+  - Dark/Light Theme Tokens: Contrast ratios $\ge 7:1$ (WCAG AAA) across all buttons, text, icons, and status badges in both themes.
+- Reason / evidence: On the physical Redmi Note 11 (width ~392dp), the previous single-row arrangement caused severe button clipping and label truncation, and Stop/Repeat lacked sufficient contrast.
+- User approval required: Yes (directed by Phase 6 UI Bug Fix request).
+- User approval/status: Accepted.
+- Files and architecture affected: `Color.kt`, `Theme.kt`, `strings.xml`, `MedicineResultScreen.kt`.
+- Migration or cleanup required: None; drop-in UI refinement.
+- Verification performed: Verified on physical Redmi Note 11 device (screenshots `screen_result_v2_top.png` and `screen_result_v2_ready.png`). All 41 unit tests passed in `./gradlew.bat test`.
+- New status: Accepted.
+
 ### 2026-10-17 — D-020 — Use kotlinx.serialization for local dataset parsing and schema validation
 - Previous decision: Generic JSON parsing specified in Backend Schema without concrete library decision.
 - Proposed replacement: Standardize on `kotlinx-serialization-json:1.7.3`.

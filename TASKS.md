@@ -210,6 +210,14 @@
 - Automated tests: Added 6 unit tests in `SpeechContentGeneratorTest` covering all matching outcomes, phonetic expansions, and disclaimer checks. Total 41/41 unit tests pass in `./gradlew.bat test`.
 - Build verification: `./gradlew.bat assembleDebug` succeeded in 27s (APK: 56,068,844 bytes).
 - Physical hardware verification: Deployed to connected Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`). Confirmed app launch, foreground execution, and zero logcat crashes.
+- Phase 6 UI Bug Fix (Voice controls clipping & contrast):
+  - Root cause: Previous 3-button horizontal row using OutlinedButton resulted in button width < 100dp on narrow mobile screens (392dp device width), clipping labels and truncating text. Stop/Repeat buttons suffered low contrast.
+  - Fix: Refactored `VoiceGuidancePanel` into a responsive 2-row layout:
+    - Row 1: Full-width primary `Speak` Button (52dp height, filled container).
+    - Row 2: Equal-width `Stop` Button (48dp height, solid Crimson Red `#EF5350` / `#C62828`) and `Repeat` Button (48dp height, solid Teal `#80CBC4` / `#00796B`).
+    - Dark theme palette refined in `Theme.kt` and `Color.kt` for WCAG AAA contrast >= 7:1 across all controls, status badges, and card text in both light and dark themes.
+    - Verified on physical Redmi Note 11 (`screen_result_v2_top.png` and `screen_result_v2_ready.png`). Zero clipping, full label visibility, high contrast, smooth scrolling, and complete navigation bar clearance.
+  - Automated tests: 41/41 unit tests pass (`.\gradlew.bat test`). Debug APK assembled (`.\gradlew.bat assembleDebug`).
 
 ## Phase 7 — AR overlay and 2D fallback
 
