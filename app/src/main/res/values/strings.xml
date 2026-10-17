@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AR Medicine Identifier</string>
+    <string name="app_tagline">Point your camera. Hear what the medicine label says.</string>
+</resources>
