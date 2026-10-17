@@ -196,19 +196,36 @@
 
 These items are not settled facts and must not be silently treated as verified:
 
-- Whether the exact Samsung Galaxy F13 model/software setup supports the selected ARCore implementation.
+- Whether the exact Samsung Galaxy F13 model/software setup supports the selected ARCore implementation (RESOLVED in Phase 7 audit: Galaxy F13 is NOT on Google ARCore Supported Devices list; Exynos 850 lacks sensor calibration; 2D fallback is mandatory).
 - Whether the selected ML Kit dependency/model works correctly with the project's final Android configuration (RESOLVED in Phase 4: verified with on-device `com.google.mlkit:text-recognition:16.0.1` on physical hardware).
 - The final Android `minSdk` after checking the real dependency graph and device (API 26 confirmed for Phase 1 baseline).
 - The final list of 20–30 medicine test records and the source/licence for each fact (RESOLVED in Phase 2: 25 curated records with full provenance in `docs/dataset-sources.md`).
-- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability (OCR baseline verified in Phase 4; matching engine and ambiguity gate verified in Phase 5; AR remains to be evaluated).
+- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability (OCR baseline verified in Phase 4; matching engine and ambiguity gate verified in Phase 5; AR overlay verified on Redmi Note 11 in Phase 7).
 - Whether local scan history, Room, WorkManager reminders, or automatic point-and-hold scanning fit the remaining time.
-- Whether any optional AR feature has been tested on the physical target device.
+- Whether any optional AR feature has been tested on the physical target device (RESOLVED in Phase 7: conditional AR overlay verified on connected Redmi Note 11; 2D fallback verified).
 
 Anti-Gravity should move an item out of this section only after it is resolved by evidence or an explicit user decision.
 
 ## 5. Decision Change Log
 
 Append new changes at the top. Do not delete superseded decisions.
+
+### 2026-10-17 — D-026 — Conditional AR Overlay Architecture with Hardware Availability Checking and Guaranteed 2D Fallback
+- Previous decision: D-008 planned conditional AR without concrete session lifecycle or hardware capability gating.
+- Proposed replacement:
+  1. Add ARCore 1.47.0 (`com.google.ar:core:1.47.0`) with `<meta-data android:name="com.google.ar.core" android:value="optional" />` and `<uses-feature android:name="android.hardware.camera.ar" android:required="false" />`.
+  2. Strictly remove transitively merged `INTERNET` and `ACCESS_NETWORK_STATE` permissions using `tools:node="remove"` in `AndroidManifest.xml` to maintain 100% offline compliance.
+  3. Implement `ArAvailabilityChecker` mapping runtime ARCore capability into typed `ArAvailabilityStatus` (`SupportedAndInstalled`, `SupportedNeedsInstall`, `UnsupportedDevice`, `Unknown`).
+  4. Implement `ArSessionManager` providing deterministic lifecycle safety (safe `resume`, `pause`, `close`) and continuous autofocus configuration.
+  5. Implement Screen S05 `ArOverlayScreen` with live tracking status pill, spatial verified medicine card (brand, strength, dosage form, active ingredient, batch/expiry), academic prototype disclaimer, and one-tap switch to the 2D accessible result screen.
+  6. Maintain Screen S07 `MedicineResultScreen` with "View AR Camera Overlay" button, ensuring bidirectional navigation and guaranteeing that non-AR devices (e.g., Samsung Galaxy F13) seamlessly access all identification and voice guidance features.
+- Reason / evidence: Device audit proved Redmi Note 11 is ARCore-supported while Galaxy F13 is not; conditional architecture guarantees zero crashes on unsupported devices and seamless 2D fallback.
+- User approval required: No (implements approved Phase 7 scope).
+- User approval/status: Accepted.
+- Files and architecture affected: `libs.versions.toml`, `build.gradle.kts`, `AndroidManifest.xml`, `strings.xml`, `ArAvailabilityChecker.kt`, `ArAvailabilityStatus.kt`, `ArSessionManager.kt`, `ArSessionState.kt`, `ArOverlayScreen.kt`, `MedicineResultScreen.kt`, `Screen.kt`, `MainActivity.kt`, `ArAvailabilityCheckerTest.kt`.
+- Migration or cleanup required: None.
+- Verification performed: 47/47 unit tests passed in `.\gradlew.bat test`, debug APK assembled, installed and verified on physical Redmi Note 11 hardware (`screen_ar_overlay.png` and `screen_result_now.png`).
+- New status: Accepted.
 
 ### 2026-10-17 — D-025 — Dedicated Accessible Result Screen (S07) and Native Android TextToSpeech Architecture
 - Previous decision: Provisional results and voice guidance planned in PRD/TRD without concrete lifecycle architecture.

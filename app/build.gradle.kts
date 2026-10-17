@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.google.arcore)
 
 
     testImplementation(libs.junit)

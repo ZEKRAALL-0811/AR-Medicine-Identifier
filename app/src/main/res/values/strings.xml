@@ -53,4 +53,14 @@
     <string name="expiry_date_label">Expiry Date</string>
     <string name="not_detected_on_label">Not detected on label</string>
     <string name="directions_title">Directions &amp; Administration</string>
+    <string name="ar_overlay_title">AR Medicine Overlay</string>
+    <string name="ar_status_tracking">AR Tracking Active</string>
+    <string name="ar_status_searching">Detecting package surface…</string>
+    <string name="ar_status_limited">Limited tracking: hold device steady</string>
+    <string name="ar_status_unsupported">ARCore unsupported — 2D fallback</string>
+    <string name="ar_status_error">AR initialization failed — 2D fallback</string>
+    <string name="ar_view_2d_result">Switch to 2D Result</string>
+    <string name="ar_view_ar_overlay">View AR Camera Overlay</string>
+    <string name="ar_fallback_active_title">2D Camera Fallback Active</string>
+    <string name="ar_fallback_explanation">ARCore is not supported or unavailable on this device hardware. The reliable 2D accessible flow remains fully functional.</string>
 </resources>

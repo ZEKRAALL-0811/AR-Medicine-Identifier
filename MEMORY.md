@@ -76,56 +76,54 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 6 UI Bug Fix Complete & Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Phase 7 Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 6 UI bug fix verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 7 complete and verified on physical hardware)`
 
-**Current milestone:** `Phase 6 — Accessible results and voice guidance (UI Bug Fix Complete & Verified; awaiting explicit approval before Phase 7)`
+**Current milestone:** `Phase 7 — AR overlay and 2D fallback (Complete & Verified; awaiting explicit approval before Phase 8)`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- Phase 6 UI Bug Fix (Voice controls clipping & contrast):
-  - Fixed clipping and label truncation on narrow screens: Replaced cramped 3-button single horizontal row with a responsive 2-row layout in `VoiceGuidancePanel`:
-    - Row 1: Full-width primary `Speak` Button (52dp height, filled container).
-    - Row 2: Equal-width `Stop` Button (48dp height, solid Crimson Red) and `Repeat` Button (48dp height, solid Teal).
-    - Ample width eliminates all label truncation; touch targets meet or exceed 48dp.
-  - High-contrast color tokens in `Theme.kt` and `Color.kt`:
-    - Dark mode: `DarkPrimary` (`#90CAF9`) on dark card has 8.2:1 contrast (WCAG AAA); `DarkOnPrimary` (`#002F54`) text on sky blue button has 8.5:1 contrast; `Stop` button `#EF5350` with `#380000` text has 8.3:1 contrast; `Repeat` button `#80CBC4` with `#003731` text has 9.1:1 contrast.
-    - Light mode: `PrimaryBlue` (`#145DA0`) on white has 9.5:1 contrast; `Stop` button `#C62828` with `#FFFFFF` text has 5.4:1 contrast; `Repeat` button `#00796B` with `#FFFFFF` text has 5.2:1 contrast.
-    - Disabled buttons: `surfaceVariant` with `onSurfaceVariant` maintains crisp >= 4.8:1 contrast.
-  - S07 Result Screen full vertical scrolling and system bars clearance:
-    - Vertical scrolling enabled across full screen content (monograph, physical package details, warnings, disclaimer).
-    - Scaffold insets respected and 36dp bottom spacing added to guarantee navigation bar clearance.
-  - On-device visual verification:
-    - Built debug APK, installed on Redmi Note 11 via `adb push + pm install`.
-    - Captured fresh screenshot evidence (`screen_result_v2_top.png` and `screen_result_v2_ready.png`).
-    - Verified all 3 voice controls ("Speak", "Stop", "Repeat") are fully legible, zero clipping, high contrast, and bottom content clears system bars.
-- Pure Kotlin domain generator `com.armod.identifier.tts.SpeechContentGenerator`.
-- Lifecycle-aware native engine wrapper `com.armod.identifier.tts.TextToSpeechManager`.
-- Automated tests: Total 41 unit tests passed in `.\gradlew.bat test`.
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,068,816 bytes).
+- Phase 7 Compatibility Audit:
+  - Redmi Note 11 (Snapdragon 680): Certified on Google ARCore Supported Devices list; `com.google.ar.core` v1.56.262080393 preinstalled and enabled (`installed=true`); camera sensors operational.
+  - Samsung Galaxy F13 (Exynos 850): Not on Google ARCore Supported Devices list; cannot run ARCore; 2D fallback is mandatory so the app never blocks or crashes.
+  - Toolchain: ARCore 1.47.0 integrates cleanly with AGP 8.7.3, Kotlin 2.0.21, and compileSdk 35.
+  - 100% Offline: Merged `INTERNET` and `ACCESS_NETWORK_STATE` permissions from ARCore AAR explicitly stripped using `tools:node="remove"`. Compiled APK has 0 network permissions.
+- Conditional AR Overlay & 2D Fallback Architecture:
+  - `ArAvailabilityChecker` with typed `ArAvailabilityStatus` sealed interface (`SupportedAndInstalled`, `SupportedNeedsInstall`, `UnsupportedDevice`, `Unknown`).
+  - `ArSessionManager` with safe lifecycle management (`resume`, `pause`, `close`), continuous autofocus, and frame tracking states (`SearchingPlanes`, `Tracking`, `Limited`, `Lost`).
+  - Screen S05 `ArOverlayScreen`: Live tracking pill, spatial floating card for verified medicine fields (brand, strength, dosage form, active ingredient, batch/expiry), academic prototype disclaimer, prominent "Switch to 2D Result" button, and secondary "Scan another package" button.
+  - Screen S07 `MedicineResultScreen`: Bidirectional navigation with "View AR Camera Overlay" button.
+  - Graceful fallback: If ARCore is unavailable or fails, fallback card displays an explanation and one-tap transition to 2D result screen.
+  - Camera contention avoided: ARCore and CameraX are isolated to separate screens and never hold camera access simultaneously.
+- Automated tests: Total 47 unit tests passed in `.\gradlew.bat test` (including 6 new tests in `ArAvailabilityCheckerTest`).
+- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly in 21s (APK: 56,338,689 bytes).
+- Physical device verification:
+  - Verified AR overlay screen rendering on Redmi Note 11 (`screen_ar_overlay.png`): Top app bar, tracking status pill, verified medicine card with active ingredient & batch/expiry, academic prototype disclaimer, and action buttons.
+  - Verified accessible 2D result screen rendering (`screen_result_now.png`): "Ready to speak", Voice Guidance panel, unclipped Speak/Stop/Repeat controls, confirmed catalogue match details, and "View AR Camera Overlay" action.
 
 **Partially implemented:**
-- None for Phase 6.
+- None for Phase 7.
 
 **Not yet implemented:**
-- Phases 7–9: AR overlay and 2D fallback, UI polish/integration, and end-to-end handoff testing.
+- Phases 8–9: UI polish, integration, edge cases, and end-to-end handoff testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 36s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,068,816 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 50s (41 unit tests passed across 6 test classes; 0 failures)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 21s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,338,689 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 29s (47 unit tests passed across 7 test classes; 0 failures)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
-- Live OCR, Matching & Speech: Verified against printed medicine packages and synthetic fixtures.
+- Live OCR, Matching, Speech, and AR Overlay: Verified against printed medicine packages and synthetic fixtures.
 
-**Current task in progress:** `Phase 6 UI bug fix complete and device verified; awaiting explicit user approval to begin Phase 7 (AR overlay and 2D fallback).`
+**Current task in progress:** `Phase 7 complete and device verified; awaiting explicit user approval to begin Phase 8 (UI polish, integration, and edge cases).`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
+- Samsung Galaxy F13 does not support ARCore (Exynos 850); 2D fallback is verified and will serve as primary mode on Galaxy F13.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Fixed Voice Guidance panel layout (responsive 2-row layout) and applied WCAG AAA high-contrast palette across Screen S07. Verified on physical Redmi Note 11.`
+**Most recent change:** `Implemented Phase 7: conditional AR overlay with hardware availability checker, ArSessionManager, ArOverlayScreen, bidirectional transitions to 2D fallback, and zero-network manifest hardening. Verified on physical Redmi Note 11.`
 
-**Next step:** `Await explicit user approval before starting Phase 7.`
+**Next step:** `Await explicit user approval before starting Phase 8.`
 
 ## 6. Session Log
 

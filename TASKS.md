@@ -221,18 +221,43 @@
 
 ## Phase 7 — AR overlay and 2D fallback
 
-- [ ] Check ARCore support and compatibility on the target handset/build environment before implementation.
-- [ ] If feasible within the one-week prototype, implement a simple AR overlay for supported extracted fields.
-- [ ] Keep the overlay concise and anchored in a stable, understandable way.
-- [ ] If ARCore is unsupported, unstable, or threatens the deadline, provide the approved accessible 2D result/camera fallback instead.
-- [ ] Do not block the main identification flow on AR availability.
+- [x] Check ARCore support and compatibility on the target handset/build environment before implementation.
+- [x] If feasible within the one-week prototype, implement a simple AR overlay for supported extracted fields.
+- [x] Keep the overlay concise and anchored in a stable, understandable way.
+- [x] If ARCore is unsupported, unstable, or threatens the deadline, provide the approved accessible 2D result/camera fallback instead.
+- [x] Do not block the main identification flow on AR availability.
 
 **Phase verification**
-- [ ] Either the AR overlay works on a supported target or the 2D fallback is complete and tested.
-- [ ] Unsupported AR does not crash or prevent identification.
-- [ ] Accessibility and text/speech results remain available.
+- [x] Either the AR overlay works on a supported target or the 2D fallback is complete and tested.
+- [x] Unsupported AR does not crash or prevent identification.
+- [x] Accessibility and text/speech results remain available.
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Device & Compatibility Audit:
+  - Audited target devices before adding ARCore dependencies:
+    - Redmi Note 11 (Current test device, Snapdragon 680): Officially certified on Google ARCore Supported Devices list; `com.google.ar.core` v1.56.262080393 preinstalled and enabled (`installed=true`); hardware camera and gyro sensors operational.
+    - Samsung Galaxy F13 (Original target, Exynos 850): Budget handset, NOT on Google ARCore Supported Devices list; lacks certified sensor calibration and cannot run ARCore without errors. Confirmed D-008: AR must be conditional (`com.google.ar.core` optional, `android.hardware.camera.ar` required="false"), and 2D fallback is strictly mandatory so non-AR devices never crash or block.
+  - Toolchain compatibility: ARCore 1.47.0 (`com.google.ar:core:1.47.0`) integrates cleanly with AGP 8.7.3, Kotlin 2.0.21, and compileSdk 35.
+  - Zero-network compliance: ARCore AAR manifest merged `INTERNET` and `ACCESS_NETWORK_STATE`; these were explicitly blocked via `tools:node="remove"` in `AndroidManifest.xml`. Merged manifest verified via build tools: zero network permissions exist in the compiled APK.
+- Architecture & Implementation:
+  - Created `ArAvailabilityChecker` and typed `ArAvailabilityStatus` sealed interface (`SupportedAndInstalled`, `SupportedNeedsInstall`, `UnsupportedDevice`, `Unknown`) with graceful timeout and error handling.
+  - Created `ArSessionManager` with safe lifecycle hooks (`createSession`, `resume`, `pause`, `close`), continuous autofocus configuration for close-up medicine package scanning, and frame-level tracking updates (`SearchingPlanes`, `Tracking`, `Limited`, `Lost`).
+  - Created Screen S05 `ArOverlayScreen`:
+    - Dynamic tracking status pill ("Detecting package surface…", "Package tracked", "Tracking limited", "Tracking lost").
+    - Spatial floating medicine card showing verified fields: brand name, strength, dosage form, active ingredient, and physical package batch/expiry attributes.
+    - Explicit uncertainty visibility: ambiguous matches display candidate variants and warning pills.
+    - Prominent, high-contrast primary button: "Switch to 2D Result" (direct transition to S07).
+    - Prominent secondary button: "Scan another package" (resets state and returns to live scan).
+    - Unsupported / failure fallback card: if ARCore is not available, displays an explanatory card and one-tap switch to the 2D accessible result screen.
+    - Camera contention avoided: ARCore and CameraX run on separate screens; neither holds the camera device when the other is active.
+  - Screen S07 `MedicineResultScreen` updated with "View AR Camera Overlay" button providing seamless bidirectional navigation between 2D and AR views.
+  - Navigation wired in `Screen.ArOverlay` and `MainActivity.kt`.
+- Automated tests: Added 6 unit tests in `ArAvailabilityCheckerTest` covering AR availability mappings and session state defaults. All 47 unit tests pass in `.\gradlew.bat test`.
+- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly in 21s (debug APK: 56,338,689 bytes).
+- Physical device verification: Deployed to Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`):
+  - Verified AR overlay screen rendering (`screen_ar_overlay.png`): Top app bar, tracking status pill, verified medicine card with active ingredient & batch/expiry, academic prototype disclaimer, and action buttons.
+  - Verified accessible 2D result screen rendering (`screen_result_now.png`): "Ready to speak", Voice Guidance panel, unclipped Speak/Stop/Repeat controls, confirmed catalogue match details, and "View AR Camera Overlay" action.
+  - Zero crashes, zero network permissions.
 
 ## Phase 8 — UI polish, integration, and edge cases
 
@@ -271,6 +296,6 @@
 
 ## Current blocker / next action
 
-**Next phase to execute:** Phase 7 — AR overlay and 2D fallback (pending user approval).  
-**Current implementation status:** Phase 6 (Accessible results and voice guidance) complete and verified on physical Redmi Note 11 hardware. 41/41 unit tests passing.  
+**Next phase to execute:** Phase 8 — UI polish, integration, and edge cases (pending explicit user approval).  
+**Current implementation status:** Phase 7 (AR overlay and 2D fallback) complete and verified on physical Redmi Note 11 hardware. 47/47 unit tests passing.  
 **Do not pre-check any implementation task.**

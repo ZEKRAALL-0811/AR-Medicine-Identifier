@@ -12,8 +12,10 @@ kotlinxSerializationJson = "1.7.3"
 camerax = "1.4.1"
 concurrentFutures = "1.2.0"
 mlkitTextRecognition = "16.0.1"
+arcore = "1.47.0"
 
 [libraries]
+google-arcore = { group = "com.google.ar", name = "core", version.ref = "arcore" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }

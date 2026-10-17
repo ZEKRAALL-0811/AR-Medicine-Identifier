@@ -85,7 +85,8 @@ fun MedicineResultScreen(
     ocrResult: OcrResult,
     onScanAnotherClick: () -> Unit,
     onInspectOcrClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onViewArClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var ttsState by remember { mutableStateOf<TtsState>(TtsState.Initializing) }
@@ -232,6 +233,39 @@ fun MedicineResultScreen(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold
                 )
+            }
+
+            if (onViewArClick != null) {
+                val isDark = isSystemInDarkTheme()
+                Button(
+                    onClick = {
+                        ttsManager.stop()
+                        onViewArClick()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .semantics {
+                            contentDescription = "View augmented reality camera overlay for this medicine"
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Color(0xFF80CBC4) else Color(0xFF00796B),
+                        contentColor = if (isDark) Color(0xFF003731) else Color.White
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.ar_view_ar_overlay),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             OutlinedButton(

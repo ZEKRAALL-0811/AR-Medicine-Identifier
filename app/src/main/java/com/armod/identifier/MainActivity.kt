@@ -26,6 +26,7 @@ import com.armod.identifier.matching.MedicineMatcher
 import com.armod.identifier.ocr.MlKitOcrProcessor
 import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.ui.navigation.Screen
+import com.armod.identifier.ui.screens.ArOverlayScreen
 import com.armod.identifier.ui.screens.LiveScanScreen
 import com.armod.identifier.ui.screens.MedicineResultScreen
 import com.armod.identifier.ui.screens.PermissionScreen
@@ -57,6 +58,7 @@ fun AppNavigation(initialRoute: String? = null) {
     val ocrProcessor = remember { MlKitOcrProcessor() }
     val medicineDataSource = remember { JsonMedicineLocalDataSource(context) }
     val startingScreen = when (initialRoute) {
+        "ar_overlay" -> Screen.ArOverlay
         "result" -> Screen.Result
         "review_ocr" -> Screen.ReviewOcr
         else -> Screen.Welcome
@@ -64,7 +66,7 @@ fun AppNavigation(initialRoute: String? = null) {
     var currentScreen by remember { mutableStateOf<Screen>(startingScreen) }
     var currentOcrResult by remember {
         mutableStateOf<OcrResult?>(
-            if (initialRoute == "result") {
+            if (initialRoute == "result" || initialRoute == "ar_overlay") {
                 OcrResult(
                     rawText = "Omez 20mg Capsules Dr. Reddy's B.No: T535 EXP: 12/2027",
                     lines = listOf(
@@ -174,8 +176,40 @@ fun AppNavigation(initialRoute: String? = null) {
                 onInspectOcrClick = {
                     currentScreen = Screen.ReviewOcr
                 },
+                onViewArClick = {
+                    currentScreen = Screen.ArOverlay
+                },
                 onBackClick = {
                     currentScreen = Screen.LiveScan
+                }
+            )
+        }
+
+        Screen.ArOverlay -> {
+            val result = currentOcrResult ?: OcrResult(rawText = "")
+            val matchOutcome = remember(result, medicineCatalogue) {
+                if (medicineCatalogue.isNotEmpty()) {
+                    MedicineMatcher.match(result, medicineCatalogue)
+                } else {
+                    MatchOutcome.InsufficientText("Loading reference catalogue…")
+                }
+            }
+
+            BackHandler {
+                currentScreen = Screen.Result
+            }
+            ArOverlayScreen(
+                matchOutcome = matchOutcome,
+                ocrResult = result,
+                onViewAccessibleResultClick = {
+                    currentScreen = Screen.Result
+                },
+                onScanAnotherClick = {
+                    currentOcrResult = null
+                    currentScreen = Screen.LiveScan
+                },
+                onBackClick = {
+                    currentScreen = Screen.Result
                 }
             )
         }

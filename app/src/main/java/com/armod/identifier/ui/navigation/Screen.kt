@@ -11,6 +11,7 @@ sealed class Screen(val route: String) {
     data object Recognising : Screen("recognising")
     data object ReviewOcr : Screen("review_ocr")
     data object Result : Screen("result")
+    data object ArOverlay : Screen("ar_overlay")
     data object Confirmation : Screen("confirmation")
     data object Unknown : Screen("unknown")
     data object Error : Screen("error")
