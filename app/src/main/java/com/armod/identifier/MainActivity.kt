@@ -6,9 +6,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,10 +41,7 @@ class MainActivity : ComponentActivity() {
         val initialRoute = intent?.getStringExtra("initial_screen")
         setContent {
             ARMedicineIdentifierTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     AppNavigation(initialRoute = initialRoute)
                 }
             }

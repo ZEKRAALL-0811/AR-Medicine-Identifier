@@ -253,11 +253,17 @@
   - Screen S07 `MedicineResultScreen` updated with "View AR Camera Overlay" button providing seamless bidirectional navigation between 2D and AR views.
   - Navigation wired in `Screen.ArOverlay` and `MainActivity.kt`.
 - Automated tests: Added 6 unit tests in `ArAvailabilityCheckerTest` covering AR availability mappings and session state defaults. All 47 unit tests pass in `.\gradlew.bat test`.
-- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly in 21s (debug APK: 56,338,689 bytes).
-- Physical device verification: Deployed to Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`):
-  - Verified AR overlay screen rendering (`screen_ar_overlay.png`): Top app bar, tracking status pill, verified medicine card with active ingredient & batch/expiry, academic prototype disclaimer, and action buttons.
-  - Verified accessible 2D result screen rendering (`screen_result_now.png`): "Ready to speak", Voice Guidance panel, unclipped Speak/Stop/Repeat controls, confirmed catalogue match details, and "View AR Camera Overlay" action.
-  - Zero crashes, zero network permissions.
+- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly (debug APK: 56,361,256 bytes).
+- Phase 7 Acceptance Review & Hardware Camera Correction:
+  - Audit revealed initial screen initialized ARCore session but lacked an OpenGL ES rendering pipeline to draw the camera hardware texture, leaving the background dark and tracking static.
+  - Corrected by creating `ArCameraSurfaceView` and `ArCameraRenderer` (OpenGL ES 2.0 quad with external OES texture and `frame.transformCoordinates2d`), driving an active `session.update()` render loop on every frame.
+  - Configured `setZOrderMediaOverlay(true)` and replaced root `Surface` with `Box` in `MainActivity.kt` to prevent Compose offscreen compositing layers from occluding the native camera SurfaceView.
+  - Implemented dynamic tracking state extraction in `ArSessionManager.updateFromFrame(frame)`: extracts `TrackingState.TRACKING` ("AR Tracking Active") and reasons (`INSUFFICIENT_LIGHT` -> "Low lighting: improve illumination", `EXCESSIVE_MOTION`, etc.) dispatched safely via main-looper Handler.
+  - Verified on physical Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`):
+    - Physical screenshot `screen_ar_live_overlay2.png` captures the real desk, keyboard, and physical environment behind the semi-translucent Compose overlay with high-contrast text and green "AR Tracking Active" status pill.
+    - Verified live tracking failure recovery: when phone was facing dark desk, tracking pill dynamically showed amber warning "Low lighting: improve illumination" (`screen_ar_live_camera.png`); upon lifting and pointing into room, tracking dynamically updated to "AR Tracking Active".
+    - Verified bidirectional navigation with S07 2D Result screen ("Switch to 2D Result" / "View AR Camera Overlay").
+    - Verified zero network permissions (`android.permission.INTERNET` and `ACCESS_NETWORK_STATE` strictly absent from merged manifest).
 
 ## Phase 8 — UI polish, integration, and edge cases
 

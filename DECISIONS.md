@@ -210,6 +210,22 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 
 Append new changes at the top. Do not delete superseded decisions.
 
+### 2026-10-18 — D-027 — OpenGL ES 2.0 Live Camera Background Rendering and Real-Time ARCore VIO Tracking for AR Overlay Screen
+- Previous decision: D-026 initialized the ARCore session and displayed Compose UI overlay with static tracking label over an empty canvas.
+- Proposed replacement:
+  1. Implement `ArCameraSurfaceView` and `ArCameraRenderer` utilizing OpenGL ES 2.0 (`GL_TEXTURE_EXTERNAL_OES`) to draw the hardware camera feed quad mapped via `frame.transformCoordinates2d(Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, ...)`.
+  2. Implement an active render loop calling `session.update()` on every frame, extracting real-time ARCore tracking states (`TrackingState.TRACKING`, `PAUSED` with reasons `INSUFFICIENT_LIGHT`, `EXCESSIVE_MOTION`, `INSUFFICIENT_FEATURES`), and dynamically dispatching state updates to Compose UI via `Looper.getMainLooper()`.
+  3. Set `setZOrderMediaOverlay(true)` on `GLSurfaceView` and replace root `Surface(color = MaterialTheme.colorScheme.background)` with `Box` in `MainActivity.kt` to prevent Compose's `CompositingStrategy.Offscreen` from occluding the hardware camera surface.
+  4. Explicitly document the overlay as a high-contrast, camera-view AR information card over the live camera feed with real-time tracking diagnostics, rather than claiming false 3D anchor stabilization.
+  5. Retain 100% offline compliance (zero network permissions, `android.permission.INTERNET` absent).
+- Reason / evidence: Acceptance review showed the previous screen was just a Compose card without a live camera stream; the new implementation renders the live physical camera background and drives real-time SLAM VIO tracking.
+- User approval required: No (fulfills Phase 7 Acceptance Review requirements).
+- User approval/status: Accepted.
+- Files and architecture affected: `ArCameraSurfaceView.kt`, `ArSessionManager.kt`, `ArOverlayScreen.kt`, `MainActivity.kt`, `strings.xml`.
+- Migration or cleanup required: None.
+- Verification performed: Unit tests (47/47 passed in `.\gradlew.bat test`), debug APK compiled, installed and physically verified on connected Redmi Note 11 hardware (`screen_ar_live_overlay2.png` captured showing physical desk, keyboard, live camera feed, and "AR Tracking Active" green status pill).
+- New status: Accepted.
+
 ### 2026-10-17 — D-026 — Conditional AR Overlay Architecture with Hardware Availability Checking and Guaranteed 2D Fallback
 - Previous decision: D-008 planned conditional AR without concrete session lifecycle or hardware capability gating.
 - Proposed replacement:

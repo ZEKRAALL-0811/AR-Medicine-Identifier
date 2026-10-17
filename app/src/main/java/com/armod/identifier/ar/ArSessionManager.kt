@@ -34,7 +34,10 @@ class ArSessionManager(
         private const val TAG = "ArSessionManager"
     }
 
-    private var session: Session? = null
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    var session: Session? = null
+        private set
     var currentState: ArSessionState = ArSessionState.Uninitialized
         private set
 
@@ -175,6 +178,8 @@ class ArSessionManager(
 
     private fun updateState(newState: ArSessionState) {
         currentState = newState
-        onStateChange(newState)
+        mainHandler.post {
+            onStateChange(newState)
+        }
     }
 }

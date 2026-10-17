@@ -76,31 +76,25 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 7 Complete & Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-18 by Anti-Gravity (Phase 7 Acceptance Review Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 7 complete and verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 7 Acceptance Review complete and verified on physical hardware)`
 
-**Current milestone:** `Phase 7 — AR overlay and 2D fallback (Complete & Verified; awaiting explicit approval before Phase 8)`
+**Current milestone:** `Phase 7 — AR overlay and 2D fallback (Acceptance Review Verified; awaiting explicit approval before Phase 8)`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- Phase 7 Compatibility Audit:
-  - Redmi Note 11 (Snapdragon 680): Certified on Google ARCore Supported Devices list; `com.google.ar.core` v1.56.262080393 preinstalled and enabled (`installed=true`); camera sensors operational.
-  - Samsung Galaxy F13 (Exynos 850): Not on Google ARCore Supported Devices list; cannot run ARCore; 2D fallback is mandatory so the app never blocks or crashes.
-  - Toolchain: ARCore 1.47.0 integrates cleanly with AGP 8.7.3, Kotlin 2.0.21, and compileSdk 35.
-  - 100% Offline: Merged `INTERNET` and `ACCESS_NETWORK_STATE` permissions from ARCore AAR explicitly stripped using `tools:node="remove"`. Compiled APK has 0 network permissions.
-- Conditional AR Overlay & 2D Fallback Architecture:
-  - `ArAvailabilityChecker` with typed `ArAvailabilityStatus` sealed interface (`SupportedAndInstalled`, `SupportedNeedsInstall`, `UnsupportedDevice`, `Unknown`).
-  - `ArSessionManager` with safe lifecycle management (`resume`, `pause`, `close`), continuous autofocus, and frame tracking states (`SearchingPlanes`, `Tracking`, `Limited`, `Lost`).
-  - Screen S05 `ArOverlayScreen`: Live tracking pill, spatial floating card for verified medicine fields (brand, strength, dosage form, active ingredient, batch/expiry), academic prototype disclaimer, prominent "Switch to 2D Result" button, and secondary "Scan another package" button.
-  - Screen S07 `MedicineResultScreen`: Bidirectional navigation with "View AR Camera Overlay" button.
-  - Graceful fallback: If ARCore is unavailable or fails, fallback card displays an explanation and one-tap transition to 2D result screen.
-  - Camera contention avoided: ARCore and CameraX are isolated to separate screens and never hold camera access simultaneously.
-- Automated tests: Total 47 unit tests passed in `.\gradlew.bat test` (including 6 new tests in `ArAvailabilityCheckerTest`).
-- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly in 21s (APK: 56,338,689 bytes).
-- Physical device verification:
-  - Verified AR overlay screen rendering on Redmi Note 11 (`screen_ar_overlay.png`): Top app bar, tracking status pill, verified medicine card with active ingredient & batch/expiry, academic prototype disclaimer, and action buttons.
-  - Verified accessible 2D result screen rendering (`screen_result_now.png`): "Ready to speak", Voice Guidance panel, unclipped Speak/Stop/Repeat controls, confirmed catalogue match details, and "View AR Camera Overlay" action.
+- Phase 7 Acceptance Review Audit & Implementation:
+  - Audit: Initial Phase 7 screen initialized the ARCore session and displayed Compose cards, but lacked an OpenGL ES background renderer to draw the hardware camera feed texture, leaving the background dark and tracking static.
+  - Corrected with `ArCameraSurfaceView` and `ArCameraRenderer`: Allocates external `GL_TEXTURE_EXTERNAL_OES` texture, registers texture name with `session.setCameraTextureName(textureId)`, calls `session.update()` on every frame in `onDrawFrame`, transforms quad coordinates using `frame.transformCoordinates2d(Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, ...)`, and renders the live hardware camera feed quad behind the Compose UI.
+  - Dynamic Tracking Pipeline: In `ArSessionManager.updateFromFrame(frame)`, camera tracking state is pulled from each live ARCore frame (`TrackingState.TRACKING` -> "AR Tracking Active"; `TrackingState.PAUSED` with failure reasons `INSUFFICIENT_LIGHT` -> "Low lighting: improve illumination", `EXCESSIVE_MOTION`, etc.) and dispatched thread-safely to Compose via main-looper Handler.
+  - SurfaceView & Compose Layering: Added `setZOrderMediaOverlay(true)` and `setWillNotDraw(false)` to `GLSurfaceView`, and replaced root `Surface(color = MaterialTheme.colorScheme.background)` with `Box` in `MainActivity.kt` to prevent Compose's `CompositingStrategy.Offscreen` from occluding the hardware camera surface.
+  - Verified on physical hardware: `screen_ar_live_overlay2.png` captured on Redmi Note 11 shows the real physical desk and laptop keyboard visible behind the semi-translucent Compose overlay, with crisp, high-contrast medicine information ("Omez 20 mg Capsule", Omeprazole, Batch: T535, Exp: 12/2027) and green "AR Tracking Active" status pill.
+  - Live tracking recovery tested: When the device faced a dark surface, tracking dynamically transitioned to amber warning "Low lighting: improve illumination" (`screen_ar_live_camera.png`); upon lifting and pointing into the room, it immediately recovered to green "AR Tracking Active".
+  - Feature Clarification: Accurately described and implemented as a high-contrast camera-view overlay with live ARCore surface tracking and diagnostics, rather than claiming false 3D anchor stabilization.
+  - Preserved 2D fallback and offline compliance: Seamless bidirectional switching to Screen S07 `MedicineResultScreen`; zero network permissions in merged manifest (`android.permission.INTERNET` and `ACCESS_NETWORK_STATE` strictly absent).
+- Automated tests: Total 47 unit tests passed in `.\gradlew.bat test`.
+- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly (debug APK: 56,361,256 bytes).
 
 **Partially implemented:**
 - None for Phase 7.
@@ -109,35 +103,40 @@ At session start, verify which of these files are actually present in the reposi
 - Phases 8–9: UI polish, integration, edge cases, and end-to-end handoff testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 21s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,338,689 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 29s (47 unit tests passed across 7 test classes; 0 failures)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 26s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,361,256 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 39s (47 unit tests passed across 7 test classes; 0 failures)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
-- Live OCR, Matching, Speech, and AR Overlay: Verified against printed medicine packages and synthetic fixtures.
+- Live AR camera background and tracking: Verified on physical device (`screen_ar_live_overlay2.png`).
 
-**Current task in progress:** `Phase 7 complete and device verified; awaiting explicit user approval to begin Phase 8 (UI polish, integration, and edge cases).`
+**Current task in progress:** `Phase 7 acceptance review complete and verified on device; stopped and awaiting explicit user approval before beginning Phase 8.`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
 - Samsung Galaxy F13 does not support ARCore (Exynos 850); 2D fallback is verified and will serve as primary mode on Galaxy F13.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Implemented Phase 7: conditional AR overlay with hardware availability checker, ArSessionManager, ArOverlayScreen, bidirectional transitions to 2D fallback, and zero-network manifest hardening. Verified on physical Redmi Note 11.`
+**Most recent change:** `Phase 7 Acceptance Review: Implemented OpenGL ES 2.0 camera background rendering (ArCameraSurfaceView, ArCameraRenderer) and dynamic ARCore frame tracking loop; resolved Compose SurfaceView hole-punching conflict; verified live camera feed and real-time tracking on physical Redmi Note 11.`
 
-**Next step:** `Await explicit user approval before starting Phase 8.`
+**Next step:** `Stop and report Phase 7 Acceptance Review findings to user. Await explicit approval before Phase 8.`
 
 ## 6. Session Log
 
-### 2026-10-17 — Phase 6 UI Bug Fix: Voice Controls Layout and Contrast (Verified on Redmi Note 11)
-- Goal: Fix clipped voice control buttons (Speak, Stop, Repeat) on Redmi Note 11, resolve low contrast on Stop/Repeat, ensure complete screen vertical scrolling and system bar clearance in light and dark themes.
-- Files changed: `app/src/main/java/com/armod/identifier/ui/screens/MedicineResultScreen.kt`, `app/src/main/java/com/armod/identifier/ui/theme/Color.kt`, `app/src/main/java/com/armod/identifier/ui/theme/Theme.kt`, `app/src/main/res/values/strings.xml`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `DECISIONS.md`, `TASKS.md`, `MEMORY.md`.
+### 2026-10-18 — Phase 7 Acceptance Review: Live AR Camera Background and Dynamic Tracking (Verified on Redmi Note 11)
+- Goal: Audit Phase 7 implementation, verify real AR camera feed and tracking vs static UI, implement OpenGL ES 2.0 camera rendering pipeline, eliminate Compose SurfaceView occlusion, verify on physical Redmi Note 11 hardware, and maintain 100% offline compliance.
+- Files changed: `app/src/main/java/com/armod/identifier/ar/ArCameraSurfaceView.kt`, `app/src/main/java/com/armod/identifier/ar/ArSessionManager.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ArOverlayScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `DECISIONS.md`, `TASKS.md`, `MEMORY.md`.
 - Implemented and verified:
-  - Responsive 2-row layout in `VoiceGuidancePanel`: Row 1 full-width `Speak` (52dp height), Row 2 equal-width `Stop` (48dp height) and `Repeat` (48dp height).
-  - High-contrast color tokens in `Theme.kt` and `Color.kt` meeting WCAG AAA >= 7:1 in both light and dark themes.
-  - S07 full vertical scrolling, insets respected, 36dp bottom clearance above navigation bar.
-  - Automated tests: `.\gradlew.bat test` (41/41 unit tests passed).
-  - Build: `.\gradlew.bat assembleDebug` (56 MB APK).
-  - Physical device verification: Installed on Redmi Note 11, captured and inspected screenshots (`screen_result_v2_top.png` and `screen_result_v2_ready.png`). Confirmed all 3 voice controls are fully legible, zero clipping, high contrast, and bottom content clears system bars.
-- Decisions made: D-021 (Responsive 2-row voice control layout and accessible high-contrast palette for Screen S07).
+  - Audit: Determined that previous implementation initialized ARCore session but lacked an OpenGL texture rendering pipeline (`GLSurfaceView` with `GL_TEXTURE_EXTERNAL_OES`), resulting in an empty dark background and static tracking label.
+  - Implemented `ArCameraSurfaceView` and `ArCameraRenderer`: Full-screen quad using OpenGL ES 2.0 with external OES texture, registered with `session.setCameraTextureName(textureId)`, invoking `session.update()` on every frame in `onDrawFrame`, transforming UV coordinates via `frame.transformCoordinates2d`, and dispatching live frame tracking states to Compose.
+  - Resolved Compose SurfaceView Occlusion: Set `setZOrderMediaOverlay(true)` and replaced root `Surface` with `Box` in `MainActivity.kt` to avoid Compose's `CompositingStrategy.Offscreen` blocking native SurfaceView hole-punching.
+  - Fixed typo in string resource reference (`switch_to_2d_result` -> `ar_view_2d_result`).
+  - Unit tests: `.\gradlew.bat test` (47/47 unit tests passed across 7 test suites).
+  - Merged manifest: Verified zero network permissions (`INTERNET` and `ACCESS_NETWORK_STATE` strictly absent).
+  - Build: `.\gradlew.bat assembleDebug` (56,361,256 bytes APK).
+  - Physical device verification on Redmi Note 11 (ADB ID `79145af9`):
+    - Physical screenshot `screen_ar_live_overlay2.png`: Live camera view is clearly visible behind semi-translucent Compose overlay cards showing real physical desk and keyboard.
+    - Verified dynamic ARCore SLAM VIO tracking: When facing dark surface, tracking pill dynamically showed "Low lighting: improve illumination" (`screen_ar_live_camera.png`); when pointed into room, dynamically recovered to green "AR Tracking Active".
+    - Verified bidirectional navigation between AR overlay and S07 2D Result screen.
+- Decisions made: D-027 (OpenGL ES 2.0 Live Camera Background Rendering and Real-Time ARCore VIO Tracking for AR Overlay Screen).
 - Next step: Await explicit user approval before starting Phase 7.
 
 ### 2026-10-17 — Phase 6: Accessible Results and Voice Guidance (Verified on Redmi Note 11)

@@ -58,9 +58,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.armod.identifier.R
 import com.armod.identifier.ar.ArAvailabilityChecker
 import com.armod.identifier.ar.ArAvailabilityStatus
+import com.armod.identifier.ar.ArCameraSurfaceView
 import com.armod.identifier.ar.ArSessionManager
 import com.armod.identifier.ar.ArSessionState
 import com.armod.identifier.ar.ArTrackingState
@@ -69,12 +71,13 @@ import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.util.TextNormaliser
 
 /**
- * Screen S05 / AR Overlay — Conditional Augmented Reality medicine overlay with reliable 2D fallback.
+ * Screen S05 / AR Overlay — Conditional Augmented Reality medicine overlay with live camera feed.
  *
  * Implements:
  * - Checks ARCore hardware compatibility at runtime.
- * - If supported and installed: renders spatial overlay showing verified medicine information,
- *   camera tracking state, and batch/expiry attributes.
+ * - If supported: embeds [ArCameraSurfaceView] rendering the live hardware camera via OpenGL ES 2.0.
+ * - Displays live ARCore tracking state from real camera frames.
+ * - Overlays readable medicine information and package attributes above the live camera view.
  * - If unsupported or failed (e.g. Samsung Galaxy F13): seamlessly displays the 2D camera fallback
  *   with a prominent, one-tap transition to the accessible 2D result screen.
  * - Preserves deterministic lifecycle management (safe resume, pause, and close).
@@ -94,6 +97,7 @@ fun ArOverlayScreen(
     val isDark = isSystemInDarkTheme()
 
     var arSessionState by remember { mutableStateOf<ArSessionState>(ArSessionState.Uninitialized) }
+    var surfaceViewRef by remember { mutableStateOf<ArCameraSurfaceView?>(null) }
 
     val arSessionManager = remember {
         ArSessionManager(context) { newState ->
@@ -120,6 +124,7 @@ fun ArOverlayScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            surfaceViewRef?.onPause()
             arSessionManager.destroy()
         }
     }
@@ -128,165 +133,219 @@ fun ArOverlayScreen(
         onBackClick()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.ar_overlay_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        modifier = Modifier.semantics { heading() }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Navigate back from AR overlay"
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
-                        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 1. Live ARCore OpenGL Camera Background Feed
+        if (arSessionState !is ArSessionState.Unsupported && arSessionState !is ArSessionState.Error) {
+            AndroidView(
+                factory = { ctx ->
+                    ArCameraSurfaceView(ctx, arSessionManager).also {
+                        surfaceViewRef = it
+                        it.onResume()
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                modifier = Modifier.fillMaxSize()
             )
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(if (isDark) Color(0xFF101720) else Color(0xFF1E293B))
-        ) {
-            Column(
+
+        // 2. Scrim and Compose UI Overlay
+        Scaffold(
+            containerColor = if (arSessionState is ArSessionState.Unsupported || arSessionState is ArSessionState.Error) {
+                if (isDark) Color(0xFF101720) else Color(0xFF1E293B)
+            } else {
+                Color.Transparent
+            },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.ar_overlay_title),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 20.sp,
+                            color = Color.White,
+                            modifier = Modifier.semantics { heading() }
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Navigate back from AR overlay"
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back),
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Black.copy(alpha = 0.65f)
+                    )
+                )
+            }
+        ) { innerPadding ->
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(innerPadding)
             ) {
-                // 1. AR Tracking Status Indicator Pill
-                ArTrackingStatusPill(
-                    sessionState = arSessionState,
-                    isDark = isDark
-                )
-
-                // 2. Spatial AR Medicine Card or 2D Fallback Card
-                when (arSessionState) {
-                    is ArSessionState.Active -> {
-                        ArSpatialMedicineCard(
-                            matchOutcome = matchOutcome,
-                            ocrResult = ocrResult,
-                            isDark = isDark
-                        )
-                    }
-
-                    is ArSessionState.Unsupported,
-                    is ArSessionState.Error -> {
-                        val reason = (arSessionState as? ArSessionState.Unsupported)?.reason
-                            ?: (arSessionState as? ArSessionState.Error)?.message
-                            ?: stringResource(R.string.ar_fallback_explanation)
-                        Ar2DFallbackCard(
-                            explanation = reason,
-                            onViewAccessibleResult = onViewAccessibleResultClick,
-                            isDark = isDark
-                        )
-                    }
-
-                    is ArSessionState.Initializing,
-                    ArSessionState.Uninitialized -> {
-                        ArLoadingCard(isDark = isDark)
-                    }
-                }
-
-                // 3. Academic Prototype Disclaimer Notice
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isDark) Color(0xFF1E293B) else Color(0xFF334155)
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.Top
+                    // 1. AR Tracking Status Indicator Pill (live updated from AR frame tracking)
+                    ArTrackingStatusPill(
+                        sessionState = arSessionState,
+                        isDark = true
+                    )
+
+                    // 2. Camera-View Medicine Information Card or 2D Fallback Card
+                    when (arSessionState) {
+                        is ArSessionState.Active -> {
+                            ArSpatialMedicineCard(
+                                matchOutcome = matchOutcome,
+                                ocrResult = ocrResult,
+                                isDark = true
+                            )
+                        }
+
+                        is ArSessionState.Unsupported,
+                        is ArSessionState.Error -> {
+                            val reason = (arSessionState as? ArSessionState.Unsupported)?.reason
+                                ?: (arSessionState as? ArSessionState.Error)?.message
+                                ?: stringResource(R.string.ar_fallback_explanation)
+                            Ar2DFallbackCard(
+                                explanation = reason,
+                                onViewAccessibleResult = onViewAccessibleResultClick,
+                                isDark = isDark
+                            )
+                        }
+
+                        is ArSessionState.Initializing,
+                        ArSessionState.Uninitialized -> {
+                            ArLoadingCard(isDark = true)
+                        }
+                    }
+
+                    // 3. Live Camera Targeting Guidance
+                    if (arSessionState is ArSessionState.Active) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.Black.copy(alpha = 0.60f)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF64748B).copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF60A5FA),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Live camera tracking active. Hold device 15–25 cm over package.",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFFE2E8F0)
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Academic Prototype Disclaimer Notice
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.Black.copy(alpha = 0.65f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFCBD5E1),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Academic Prototype: Live camera overlay for research demonstration only. Not a clinically validated medical tool. Always check physical packaging.",
+                                fontSize = 12.sp,
+                                color = Color(0xFFCBD5E1),
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // 5. Primary and Secondary Action Controls
+                    Button(
+                        onClick = onViewAccessibleResultClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .semantics {
+                                contentDescription = "Switch to full 2D accessible result screen"
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF90CAF9),
+                            contentColor = Color(0xFF002F54)
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = Color(0xFFCBD5E1),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Academic Prototype: AR overlay is for research demonstration only. Not a clinically validated medical tool. Always check physical packaging.",
-                            fontSize = 12.sp,
-                            color = Color(0xFFCBD5E1),
-                            lineHeight = 17.sp
+                            text = stringResource(R.string.ar_view_2d_result),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onScanAnotherClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .semantics {
+                                contentDescription = "Scan another medicine package"
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.scan_another),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 4. Primary and Secondary Action Controls
-                Button(
-                    onClick = onViewAccessibleResultClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .semantics {
-                            contentDescription = "Switch to full 2D accessible result screen"
-                        },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Color(0xFF90CAF9) else MaterialTheme.colorScheme.primary,
-                        contentColor = if (isDark) Color(0xFF002F54) else Color.White
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.ar_view_2d_result),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = onScanAnotherClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .semantics {
-                            contentDescription = "Scan another medicine package"
-                        },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.scan_another),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -373,7 +432,7 @@ private fun ArSpatialMedicineCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E293B) else Color(0xFF263238)
+            containerColor = Color(0xDD0F172A)
         ),
         border = BorderStroke(
             1.5.dp,
