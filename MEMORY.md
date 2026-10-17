@@ -76,48 +76,68 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 2 Local Medicine Data Model & Bundled Dataset)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Phase 3 Camera Permissions & Capture Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git repo active, clean build, local dataset with 25 records and validation test suite)`
+**Repository / branch:** `d:\ARVR Project (Git repo active, clean build, CameraX pipeline verified on physical hardware)`
 
-**Current milestone:** `Phase 2 — Local Medicine Data Model, Bundled JSON, Provenance, and Validation Complete & Verified`
+**Current milestone:** `Phase 3 — Camera Permissions and Capture Complete & Verified on Hardware`
 
 **Implemented and verified:**
-- Phases 0 & 1 foundations preserved and verified.
-- `MedicineRecord` data model annotated with `@Serializable` and `@SerialName` properties matching Backend Schema Section 4.
-- `medicines.json` created in `app/src/main/assets/` containing exactly 25 curated, real-world medicine-package records sourced from NLEM 2022, NHS UK, DailyMed FDA, and WHO EML.
-- Provenance and attribution documented in `docs/dataset-sources.md`. Zero fabricated records or personalized dosing claims.
-- `JsonMedicineParser` implemented with strict validation: detects malformed JSON, missing required fields (`id`, `sourceTitle`, `datasetVersion`), duplicate IDs, and empty datasets, while safely ignoring unexpected optional fields.
-- `JsonMedicineLocalDataSource` implemented with cached in-memory retrieval and lookup methods (`getAllMedicines`, `getMedicineById`, `searchByName`, `findByExactNameAndStrength`).
-- Packaged inside APK: `assets/medicines.json` (25,414 bytes) confirmed present in `app-debug.apk`.
-- Automated tests: `MedicineDataValidationTest` (all 9 unit test cases passed) and `BaselineUnitTest` passed in `./gradlew test`.
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (9,725,842 bytes).
+- Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
+- Phase 2 debug APK was installed and launched successfully on Redmi Note 11.
+- `android.permission.CAMERA` and camera hardware feature declared in `AndroidManifest.xml` (zero network permissions).
+- CameraX dependencies integrated (`camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view` version 1.4.1).
+- `CameraCaptureManager` implemented for lifecycle-aware preview and strictly on-device in-memory image capture with immediate `ImageProxy.close()`.
+- Minimal high-contrast framing guide overlay (`CameraFramingOverlay`) implemented.
+- Compose navigation flow connecting Welcome (S01), Permission / Readiness (S02), Scan Guidance (S03), and Live Scan (S04) with predictable back navigation.
+- Runtime camera permission flow verified on physical hardware: handles initial request, granted transition, denied state without crashing, and guidance screen with "Try again" / "Open App Settings".
+- Live camera preview and frame capture physically verified on hardware: successfully streamed camera preview and captured 2448 × 3264 px frame.
+- Automated tests: `CameraStateTest` (3 test cases passed), `MedicineDataValidationTest` (9 test cases passed), `BaselineUnitTest` (1 test case passed). Total 13 tests passed in `./gradlew test`.
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (11,856,070 bytes) and installed onto physical hardware via ADB.
 
 **Partially implemented:**
-- App runtime launch: The debug APK was built successfully, but runtime launch on hardware remains unperformed / blocked because no physical Samsung Galaxy F13 is currently attached via USB debugging, and local Android emulator cannot run due to CPU virtualization being disabled in laptop BIOS.
+- Full medicine identification pipeline: Camera frame capture is complete, but ML Kit OCR extraction (Phase 4), matching engine (Phase 5), text-to-speech guidance (Phase 6), and AR overlay (Phase 7) are yet to be integrated.
 
 **Not yet implemented:**
-- Phase 3: Permissions and camera foundation (no authentication).
-- Phases 4–9: OCR, field extraction, matching, speech, AR/2D fallback, integration, and final testing.
+- Phase 4: On-device OCR pipeline (ML Kit Text Recognition v2).
+- Phases 5–9: Field extraction, local matching, speech guidance, AR/2D fallback, integration, and final testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 9,725,842 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL (45 tasks executed; all unit tests passed)
-- Instrumented tests/result: Not yet run (requires device)
-- Samsung Galaxy F13 device check: Not connected via USB/ADB (`adb devices` list empty)
-- ARCore compatibility check: Unverified on hardware; 2D accessible fallback architected
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 11,856,070 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL (45 tasks executed; all 13 unit tests passed)
+- Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
+- Camera hardware test: Verified live streaming and 2448 × 3264 px frame capture on hardware.
 
-**Current task in progress:** `Phase 2 complete and build verified; awaiting user approval to begin Phase 3.`
+**Current task in progress:** `Phase 3 complete and device verified; awaiting user approval to begin Phase 4.`
 
 **Known issues / blockers:**
-- Hardware virtualization (VT-x) is disabled in laptop BIOS (`VirtualizationFirmwareEnabled: False`), preventing local Android emulator execution.
-- Physical Samsung Galaxy F13 is not currently connected via USB. Physical device connection with USB debugging enabled is required to verify on-device runtime launch.
+- Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
+- CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Created medicines.json (25 records), JsonMedicineParser, JsonMedicineLocalDataSource, docs/dataset-sources.md, and MedicineDataValidationTest.`
+**Most recent change:** `Implemented CameraX capture and preview, S01–S04 screens, verified live camera feed and capture on Redmi Note 11, and passed all unit tests.`
 
-**Next step:** `Obtain user approval for Phase 2 report, then proceed to Phase 3 (Permissions and camera foundation; no authentication).`
+**Next step:** `Obtain user approval for Phase 3 report, then proceed to Phase 4 (On-device OCR pipeline using ML Kit Text Recognition v2).`
 
 ## 6. Session Log
+
+### 2026-10-17 — Phase 3: Camera Permissions and Capture (Verified on Redmi Note 11)
+- Goal: Connect physical Redmi Note 11, install Phase 2 APK, implement CameraX capture and runtime permissions, test live preview and capture on device.
+- Files changed: `app/src/main/AndroidManifest.xml`, `gradle/libs.versions.toml`, `app/build.gradle.kts`, `app/src/main/res/values/strings.xml`, `app/src/main/java/com/armod/identifier/camera/CameraState.kt`, `app/src/main/java/com/armod/identifier/camera/CameraCaptureManager.kt`, `app/src/main/java/com/armod/identifier/camera/CameraFramingOverlay.kt`, `app/src/main/java/com/armod/identifier/camera/CameraPreviewView.kt`, `app/src/main/java/com/armod/identifier/ui/screens/WelcomeScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/PermissionScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ScanGuidanceScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/LiveScanScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `app/src/test/java/com/armod/identifier/camera/CameraStateTest.kt`, `MEMORY.md`, `DECISIONS.md`, `TASKS.md`.
+- Implemented and verified:
+  - Step A: Verified Redmi Note 11 attached via ADB (`79145af9`, Model 2201117TI, Android 13, API 33).
+  - Step B: Installed Phase 2 starter APK; launched without crash (verified with screenshot and logcat).
+  - Step C: Added `android.permission.CAMERA` and camera feature; added CameraX 1.4.1; implemented `CameraCaptureManager`, `CameraFramingOverlay`, `CameraPreviewView`, and screens S01–S04 with accessible navigation.
+  - Step D: Ran `.\gradlew.bat test` (all 13 tests passed) and `.\gradlew.bat assembleDebug` (11.85 MB APK). Installed on phone; tested first launch, granted permission, verified live camera preview on device screen, captured 2448 × 3264 px frame, revoked permission to test denied state without crash, and verified recovery guidance.
+- Commands/builds/tests run and outcomes:
+  - `adb devices -l`: Verified device `79145af9` (Redmi Note 11, API 33).
+  - `.\gradlew.bat test`: BUILD SUCCESSFUL in 2m 1s (45 tasks). 13/13 tests passed.
+  - `.\gradlew.bat assembleDebug`: BUILD SUCCESSFUL in 1m 40s (35 tasks).
+  - `adb install -r ...`: Success.
+  - Hardware testing: Verified live camera view and captured photo via screencap inspection.
+- Device checks performed: Verified on physical Redmi Note 11 hardware via USB.
+- Decisions made (and why): Accepted D-021 (Redmi Note 11 as temporary test device) and D-022 (CameraX 1.4.1 with on-device in-memory frame handling).
+- Current task remaining: Wait for user approval of Phase 3 report.
+- Next step: Phase 4 — On-device OCR pipeline (ML Kit Text Recognition v2).
 
 ### 2026-10-17 — Phase 2: Local Medicine Data Model, Bundled JSON, Provenance, and Validation
 - Goal: Define local data model, bundle 25 traceable records in `medicines.json`, implement parser and data source with strict validation, verify via unit tests and build.

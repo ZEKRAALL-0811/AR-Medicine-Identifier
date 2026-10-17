@@ -189,6 +189,28 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 
 Append new changes at the top. Do not delete superseded decisions.
 
+### 2026-10-17 — D-022 — Standardize on CameraX 1.4.1 with on-device in-memory image capture
+- Previous decision: Provisional CameraX dependency planned without exact version.
+- Proposed replacement: Use `androidx.camera:camera-core:1.4.1`, `camera-camera2:1.4.1`, `camera-lifecycle:1.4.1`, `camera-view:1.4.1` with `ProcessCameraProvider` and `AndroidView(PreviewView)`. Frames captured on-device with immediate `ImageProxy.close()`.
+- Reason / evidence: Robust compatibility with AGP 8.7.3, Compose BOM 2024.11.00, compileSdk 35, and hardware acceleration on physical Redmi Note 11 (Android 13 / API 33).
+- User approval required: No (aligns with TRD and PRD).
+- User approval/status: Accepted.
+- Files and architecture affected: `gradle/libs.versions.toml`, `app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`, `CameraCaptureManager.kt`, `CameraPreviewView.kt`, `LiveScanScreen.kt`.
+- Migration or cleanup required: None.
+- Verification performed: Verified live camera preview and 2448x3264 photo capture on physical Redmi Note 11 device.
+- New status: Accepted.
+
+### 2026-10-17 — D-021 — Use connected Redmi Note 11 (Android 13 / API 33) as temporary development and testing device
+- Previous decision: Samsung Galaxy F13 specified as target hardware; local emulator blocked by BIOS virtualization.
+- Proposed replacement: Use connected Redmi Note 11 (Model 2201117TI, Android 13, API 33) for interim development and physical-device verification without waiting for Samsung phone.
+- Reason / evidence: Explicit user authorization; device physically connected via USB debugging with verified installation and hardware camera access.
+- User approval required: Yes (directed by user).
+- User approval/status: Accepted.
+- Files and architecture affected: Development and verification workflows in `MEMORY.md` and `TASKS.md`.
+- Migration or cleanup required: None.
+- Verification performed: `adb devices` showed `79145af9 device`, installed debug APK, launched app, verified camera stream.
+- New status: Accepted.
+
 ### 2026-10-17 — D-020 — Use kotlinx.serialization for local dataset parsing and schema validation
 - Previous decision: Generic JSON parsing specified in Backend Schema without concrete library decision.
 - Proposed replacement: Standardize on `kotlinx-serialization-json:1.7.3`.

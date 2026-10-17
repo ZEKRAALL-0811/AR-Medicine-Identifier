@@ -5,8 +5,15 @@ package com.armod.identifier.camera
  */
 sealed interface CameraState {
     data object PermissionRequired : CameraState
-    data object PermissionDenied : CameraState
+    data class PermissionDenied(val isPermanentlyDenied: Boolean = false) : CameraState
     data object Initializing : CameraState
     data object Ready : CameraState
-    data class Error(val message: String) : CameraState
+    data object Capturing : CameraState
+    data class Captured(
+        val imageWidth: Int,
+        val imageHeight: Int,
+        val rotationDegrees: Int,
+        val timestamp: Long = System.currentTimeMillis()
+    ) : CameraState
+    data class Error(val message: String, val canRetry: Boolean = true) : CameraState
 }

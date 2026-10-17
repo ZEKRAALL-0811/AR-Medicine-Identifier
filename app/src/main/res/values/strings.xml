@@ -1,4 +1,25 @@
 <resources>
     <string name="app_name">AR Medicine Identifier</string>
     <string name="app_tagline">Point your camera. Hear what the medicine label says.</string>
+    
+    <string name="start_scanning">Start scanning</string>
+    <string name="camera_permission_title">Camera Access Required</string>
+    <string name="camera_permission_rationale">To identify medicine labels on-device, this app needs access to your phone camera. All image processing stays completely offline on your device.</string>
+    <string name="camera_permission_grant">Allow camera access</string>
+    <string name="camera_permission_denied_title">Camera Permission Denied</string>
+    <string name="camera_permission_denied_desc">The app cannot scan medicine packaging without camera permission. You can grant permission to continue.</string>
+    <string name="camera_permission_permanently_denied">Camera permission was permanently denied. Please open Android App Settings to enable Camera permission for AR Medicine Identifier.</string>
+    <string name="open_settings">Open App Settings</string>
+    <string name="try_again">Try again</string>
+    <string name="back">Back</string>
+    <string name="scan_guidance_title">How to Frame Medicine</string>
+    <string name="scan_guidance_desc">Hold the medicine package steady 15–25 cm from the camera in good lighting, avoiding glare on blister foils.</string>
+    <string name="begin_scan">Begin scan</string>
+    <string name="capture_button">Capture medicine label</string>
+    <string name="capturing">Capturing…</string>
+    <string name="capture_success">Label captured on-device</string>
+    <string name="capture_another">Capture another frame</string>
+    <string name="camera_error">Camera unavailable</string>
+    <string name="retry">Retry</string>
+    <string name="disclaimer_academic">Academic Proof of Concept — Not for clinical or diagnostic use.</string>
 </resources>

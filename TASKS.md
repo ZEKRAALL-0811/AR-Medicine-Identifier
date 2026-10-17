@@ -91,20 +91,34 @@
 
 ## Phase 3 — Permissions and camera foundation (no authentication)
 
-- [ ] Confirm and document that user authentication is out of scope; do not build signup, login, sessions, or protected routes.
-- [ ] Implement camera permission request and denial handling.
-- [ ] Implement camera preview/capture using an Android-compatible camera approach.
-- [ ] Provide clear guidance when permission is denied or the camera is unavailable.
-- [ ] Keep image processing on-device and avoid uploading frames or OCR text.
-- [ ] Add a way to retry or return safely from camera errors.
+- [x] Confirm and document that user authentication is out of scope; do not build signup, login, sessions, or protected routes.
+- [x] Implement camera permission request and denial handling.
+- [x] Implement camera preview/capture using an Android-compatible camera approach (CameraX 1.4.1).
+- [x] Provide clear guidance when permission is denied or the camera is unavailable.
+- [x] Keep image processing on-device and avoid uploading frames or OCR text.
+- [x] Add a way to retry or return safely from camera errors.
 
 **Phase verification**
-- [ ] Permission granted: camera preview/capture works.
-- [ ] Permission denied: app remains usable and explains how to proceed.
-- [ ] Camera unavailable/error: no crash; a useful recovery path is shown.
-- [ ] Network inspection/code review confirms no image upload path was added.
+- [x] Permission granted: camera preview/capture works (verified live on connected Redmi Note 11).
+- [x] Permission denied: app remains usable and explains how to proceed ("Try again" / "Open App Settings").
+- [x] Camera unavailable/error: no crash; a useful recovery path is shown.
+- [x] Network inspection/code review confirms no image upload path was added (`android.permission.INTERNET` absent).
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Verified connected physical device: Redmi Note 11 (`79145af9`, Model 2201117TI, Android 13 / API 33).
+- Added `android.permission.CAMERA` to `AndroidManifest.xml`. Confirmed zero internet/network permissions exist in manifest.
+- Integrated CameraX 1.4.1 (`camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view`) with `concurrent-futures-ktx:1.2.0`.
+- Implemented `CameraCaptureManager` managing lifecycle-bound preview and on-device photo capture, immediately closing `ImageProxy` after metadata extraction to prevent memory leaks.
+- Implemented `CameraFramingOverlay` with high-contrast corner brackets (Primary Blue `#145DA0`) and subtle scrim.
+- Implemented screens: Welcome (S01), Permission (S02), Scan Guidance (S03), and LiveScan (S04) with Compose state navigation and `BackHandler`.
+- Verified on physical hardware (Redmi Note 11):
+  1. First launch and runtime permission request handled.
+  2. Granted permission transitioned immediately to Scan Guidance, then live camera stream opened.
+  3. Image captured successfully at 2448 × 3264 px resolution (0° rotation) and shown in capture confirmation card.
+  4. Permission denial handled without crash, correctly rendering Permission Denied screen with "Try again" and "Back" buttons.
+  5. Recovery guidance verified on device.
+- Automated tests: Total 13 tests passed in `./gradlew.bat test` (3 tests in `CameraStateTest`, 9 in `MedicineDataValidationTest`, 1 in `BaselineUnitTest`).
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (11,856,070 bytes) and installed onto physical hardware via ADB.
 
 ## Phase 4 — On-device OCR pipeline
 
