@@ -36,4 +36,21 @@
     <string name="warnings_title">Warnings &amp; Precautions</string>
     <string name="side_effects_title">Common Side Effects</string>
     <string name="purpose_title">Approved Purpose / Indication</string>
+    <string name="medicine_result_title">Medicine Result</string>
+    <string name="voice_guidance_title">Voice Guidance</string>
+    <string name="tts_speak">Listen to result</string>
+    <string name="tts_stop">Stop speech</string>
+    <string name="tts_repeat">Repeat speech</string>
+    <string name="tts_status_speaking">Speaking…</string>
+    <string name="tts_status_idle">Ready to speak</string>
+    <string name="tts_status_stopped">Speech stopped</string>
+    <string name="tts_status_unavailable">Voice guidance unavailable on this device</string>
+    <string name="inspect_raw_ocr">Inspect raw OCR text</string>
+    <string name="view_accessible_result">View Voice &amp; Accessible Result</string>
+    <string name="academic_disclaimer_full">Academic Prototype Notice: This app is an academic research prototype with a limited 25-record local catalogue. It is NOT a substitute for professional healthcare advice, pharmacist consultation, or physical verification of original manufacturer packaging. Never change medication dosage without consulting a qualified clinician.</string>
+    <string name="package_details_title">Physical Package Attributes</string>
+    <string name="batch_number_label">Batch Number</string>
+    <string name="expiry_date_label">Expiry Date</string>
+    <string name="not_detected_on_label">Not detected on label</string>
+    <string name="directions_title">Directions &amp; Administration</string>
 </resources>

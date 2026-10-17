@@ -27,6 +27,7 @@ import com.armod.identifier.ocr.MlKitOcrProcessor
 import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.ui.navigation.Screen
 import com.armod.identifier.ui.screens.LiveScanScreen
+import com.armod.identifier.ui.screens.MedicineResultScreen
 import com.armod.identifier.ui.screens.PermissionScreen
 import com.armod.identifier.ui.screens.ReviewOcrScreen
 import com.armod.identifier.ui.screens.ScanGuidanceScreen
@@ -122,10 +123,39 @@ fun AppNavigation() {
                 ocrProcessor = ocrProcessor,
                 onOcrResult = { result ->
                     currentOcrResult = result
-                    currentScreen = Screen.ReviewOcr
+                    currentScreen = Screen.Result
                 },
                 onBackClick = {
                     currentScreen = Screen.ScanGuidance
+                }
+            )
+        }
+
+        Screen.Result -> {
+            val result = currentOcrResult ?: OcrResult(rawText = "")
+            val matchOutcome = remember(result, medicineCatalogue) {
+                if (medicineCatalogue.isNotEmpty()) {
+                    MedicineMatcher.match(result, medicineCatalogue)
+                } else {
+                    MatchOutcome.InsufficientText("Loading reference catalogue…")
+                }
+            }
+
+            BackHandler {
+                currentScreen = Screen.LiveScan
+            }
+            MedicineResultScreen(
+                matchOutcome = matchOutcome,
+                ocrResult = result,
+                onScanAnotherClick = {
+                    currentOcrResult = null
+                    currentScreen = Screen.LiveScan
+                },
+                onInspectOcrClick = {
+                    currentScreen = Screen.ReviewOcr
+                },
+                onBackClick = {
+                    currentScreen = Screen.LiveScan
                 }
             )
         }
@@ -141,7 +171,7 @@ fun AppNavigation() {
             }
 
             BackHandler {
-                currentScreen = Screen.LiveScan
+                currentScreen = Screen.Result
             }
             ReviewOcrScreen(
                 ocrResult = result,
@@ -150,8 +180,11 @@ fun AppNavigation() {
                     currentOcrResult = null
                     currentScreen = Screen.LiveScan
                 },
+                onViewResultClick = {
+                    currentScreen = Screen.Result
+                },
                 onBackClick = {
-                    currentScreen = Screen.LiveScan
+                    currentScreen = Screen.Result
                 }
             )
         }

@@ -68,6 +68,7 @@ fun ReviewOcrScreen(
     matchOutcome: MatchOutcome,
     onScanAnotherClick: () -> Unit,
     onBackClick: () -> Unit,
+    onViewResultClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -246,11 +247,28 @@ fun ReviewOcrScreen(
                     .padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (onViewResultClick != null) {
+                    Button(
+                        onClick = onViewResultClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.view_accessible_result),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
                 Button(
                     onClick = onScanAnotherClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                 ) {

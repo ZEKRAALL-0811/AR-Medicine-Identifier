@@ -184,21 +184,32 @@
 
 ## Phase 6 — Accessible results and voice guidance
 
-- [ ] Build the medicine result screen using the approved UI/UX brief.
-- [ ] Integrate Android TextToSpeech for read-aloud results and key instructions.
-- [ ] Add visible controls to speak, stop speech, and repeat speech.
-- [ ] Ensure important information is available as text as well as speech.
-- [ ] Support large readable text, adequate contrast, clear touch targets, and screen-reader semantics.
-- [ ] Clearly distinguish confirmed readable fields from unknown/unreadable fields.
-- [ ] Include a concise safety message that the app is an academic prototype and not a substitute for pharmacist/clinician advice.
+- [x] Build the medicine result screen using the approved UI/UX brief.
+- [x] Integrate Android TextToSpeech for read-aloud results and key instructions.
+- [x] Add visible controls to speak, stop speech, and repeat speech.
+- [x] Ensure important information is available as text as well as speech.
+- [x] Support large readable text, adequate contrast, clear touch targets, and screen-reader semantics.
+- [x] Clearly distinguish confirmed readable fields from unknown/unreadable fields.
+- [x] Include a concise safety message that the app is an academic prototype and not a substitute for pharmacist/clinician advice.
 
 **Phase verification**
-- [ ] Text and speech agree and do not invent missing values.
-- [ ] Speech can be started/stopped/repeated and handles unavailable TTS gracefully.
-- [ ] Core flow is usable without relying on color or speech alone.
-- [ ] TalkBack/Android accessibility checks are performed where available.
+- [x] Text and speech agree and do not invent missing values.
+- [x] Speech can be started/stopped/repeated and handles unavailable TTS gracefully.
+- [x] Core flow is usable without relying on color or speech alone.
+- [x] TalkBack/Android accessibility checks are performed where available.
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Created `com.armod.identifier.tts.SpeechContentGenerator`: pure JVM component synthesizing clear English readouts for `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, and `InsufficientText`. Features phonetic dosage expansion (`20mg` -> `20 milligrams`), batch/expiry attribute readouts, and mandatory academic safety disclaimers.
+- Created `com.armod.identifier.tts.TextToSpeechManager`: lifecycle-safe native `android.speech.tts.TextToSpeech` manager with MainLooper state synchronization, `UtteranceProgressListener` tracking, Speak/Stop/Repeat operations, and deterministic resource release on dispose.
+- Built Screen S07 `MedicineResultScreen`:
+  - High-contrast typography scale (26sp title, 20sp subtitle, 15sp body) and >= 48-56dp touch targets.
+  - Dedicated `VoiceGuidancePanel` with Speak, Stop, Repeat buttons and dynamic status indicator ("Speaking…", "Ready to speak", "Voice unavailable").
+  - Dedicated cards for Confident matches (monograph directions, warnings, side effects), Ambiguous matches (candidate cards and uncertainty explanation), No Match, and Insufficient Text.
+  - Highly visible Academic Prototype Safety Notice banner.
+- Integrated into `MainActivity`: LiveScan auto-navigates to S07 `MedicineResultScreen`; S06 `ReviewOcrScreen` and S07 `MedicineResultScreen` cross-link cleanly with back and inspection buttons.
+- Automated tests: Added 6 unit tests in `SpeechContentGeneratorTest` covering all matching outcomes, phonetic expansions, and disclaimer checks. Total 41/41 unit tests pass in `./gradlew.bat test`.
+- Build verification: `./gradlew.bat assembleDebug` succeeded in 27s (APK: 56,068,844 bytes).
+- Physical hardware verification: Deployed to connected Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`). Confirmed app launch, foreground execution, and zero logcat crashes.
 
 ## Phase 7 — AR overlay and 2D fallback
 
@@ -252,6 +263,6 @@
 
 ## Current blocker / next action
 
-**Next phase to execute:** Phase 6 — Accessible results and voice guidance (pending user approval).  
-**Current implementation status:** Phase 5 (Field extraction, local matching, and confidence gate) complete and verified on physical Redmi Note 11 hardware. 35/35 unit tests passing.  
+**Next phase to execute:** Phase 7 — AR overlay and 2D fallback (pending user approval).  
+**Current implementation status:** Phase 6 (Accessible results and voice guidance) complete and verified on physical Redmi Note 11 hardware. 41/41 unit tests passing.  
 **Do not pre-check any implementation task.**

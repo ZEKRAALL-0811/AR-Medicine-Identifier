@@ -210,6 +210,23 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 
 Append new changes at the top. Do not delete superseded decisions.
 
+### 2026-10-17 — D-025 — Dedicated Accessible Result Screen (S07) and Native Android TextToSpeech Architecture
+- Previous decision: Provisional results and voice guidance planned in PRD/TRD without concrete lifecycle architecture.
+- Proposed replacement:
+  1. Implement dedicated Screen S07 `MedicineResultScreen` with WCAG-compliant high-contrast typography, large touch targets (>= 48–56dp), and distinct outcome cards (`ConfidentResultCard`, `AmbiguousResultCard`, `NoMatchResultCard`, `InsufficientTextResultCard`).
+  2. Implement pure JVM domain generator `SpeechContentGenerator` to synthesize natural English speech from typed `MatchOutcome` records with phonetic strength expansions (e.g. "20 milligrams"), batch/expiry package attributes, and mandatory academic safety disclaimers.
+  3. Implement lifecycle-aware `TextToSpeechManager` wrapping Android's native on-device `android.speech.tts.TextToSpeech`.
+  4. Provide accessible Speak, Stop, and Repeat voice guidance controls.
+  5. Enforce deterministic cleanup: release engine and stop speech immediately on screen disposal or navigation away.
+  6. Maintain zero network dependencies and zero internet permissions (`android.permission.INTERNET` absent).
+- Reason / evidence: Guarantees accessible, audible results for visually impaired users without leaking resources, fabricating facts, or relying on external cloud APIs.
+- User approval required: No (implements approved Phase 6 scope).
+- User approval/status: Accepted.
+- Files and architecture affected: `SpeechContentGenerator.kt`, `TextToSpeechManager.kt`, `MedicineResultScreen.kt`, `ReviewOcrScreen.kt`, `MainActivity.kt`, `SpeechContentGeneratorTest.kt`.
+- Migration or cleanup required: None.
+- Verification performed: Unit tests in `SpeechContentGeneratorTest` (6/6 passed, 41/41 total passed in `./gradlew test`), debug APK built (56 MB), deployed and tested on Redmi Note 11 (Android 13 / API 33).
+- New status: Accepted.
+
 ### 2026-10-17 — D-024 — Multi-field conservative matching with strength verification and ambiguity gating
 - Previous decision: Provisional matching approach specified in TRD Section 5.
 - Proposed replacement: Implement `MedicineMatcher` using multi-field score evaluation (brand name, active ingredient, strength, dosage form, manufacturer corroboration) with explicit confidence gates:

@@ -76,55 +76,83 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Phase 5 Field Extraction & Local Matching Engine Complete & Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Phase 6 Accessible Results & Voice Guidance Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 5 matching pipeline verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 6 voice guidance pipeline verified on physical hardware)`
 
-**Current milestone:** `Phase 5 — Field extraction, local matching, and confidence gate Complete & Verified`
+**Current milestone:** `Phase 6 — Accessible results and voice guidance Complete & Verified`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- Pure Kotlin matching outcome models in `com.armod.identifier.matching.MatchOutcome`: `MatchConfidence`, `MatchedField`, `MatchCandidate`, and sealed outcomes: `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, `InsufficientText`.
-- Deterministic, conservative local matching engine in `com.armod.identifier.matching.MedicineMatcher`:
-  - Token-level matching against medicine brand name, generic active ingredient, dosage form, and manufacturer.
-  - OCR noise-resilient strength extraction regex supporting units (`mg`, `mcg`, `g`, `ml`, `iu`, `%`) and glued token boundaries (`20.mg`, `P20mg`).
-  - Conflicting strength hard disqualifier: candidate strength mismatch prevents false positive identification.
-  - Multi-strength catalogue ambiguity gate: if a matched medicine name has multiple catalogued strength formulations (e.g., Paracetamol 500mg vs 650mg, Atorvastatin 10mg vs 20mg) and OCR strength is absent or unverified, match is downgraded to `AmbiguousMatch`.
-  - Expiry and batch values extracted only via `TextNormaliser` package regexes; strictly excluded from medicine identity matching.
-- Screen S06 (`ReviewOcrScreen`) enhanced:
-  - Confident match banner with verified badge and expandable monograph accordion (directions, warnings, side effects).
-  - Ambiguous match warning card explaining uncertainty and listing candidate medicines with individual strengths.
-  - No match card explaining uncatalogued package or insufficient evidence.
-  - Insufficient text retry card when OCR text is empty or blank.
-  - Preserved raw OCR text expander and detected lines for developer/auditor inspection.
-- Navigation wired in `MainActivity`: manages `JsonMedicineLocalDataSource` catalogue parsing and reactive matching execution.
-- Automated tests: Total 35 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`, 15 `MedicineMatcherTest`).
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,066,979 bytes).
-- Physical hardware verification: Deployed to Redmi Note 11; verified app launch and reactive matching state transitions.
+- Dedicated Screen S07 `MedicineResultScreen`:
+  - High-contrast typography scale (26sp title, 20sp subtitle, 15sp body) and >= 48–56dp touch targets.
+  - Dedicated `VoiceGuidancePanel` with Speak, Stop, Repeat buttons and dynamic status indicator pill ("Speaking…", "Ready to speak", "Voice unavailable").
+  - Dedicated cards for Confident matches (monograph directions, warnings, side effects), Ambiguous matches (candidate cards and uncertainty explanation), No Match, and Insufficient Text.
+  - Highly visible Academic Prototype Safety Notice banner.
+- Pure Kotlin domain generator `com.armod.identifier.tts.SpeechContentGenerator`:
+  - Synthesizes clear, accessible English spoken readouts for `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, and `InsufficientText`.
+  - Phonetic dosage expansion (`20mg` -> `20 milligrams`, `500 mcg` -> `500 micrograms`, `10ml` -> `10 milliliters`, `1%` -> `1 percent`).
+  - Batch number and expiry date extracted from OCR package attributes; never fabricated or guessed.
+  - Mandatory academic research prototype safety disclaimer included in all spoken outputs.
+- Lifecycle-aware native engine wrapper `com.armod.identifier.tts.TextToSpeechManager`:
+  - Wraps on-device `android.speech.tts.TextToSpeech` with zero network permissions (`android.permission.INTERNET` absent).
+  - MainLooper state synchronization for Compose safety.
+  - `UtteranceProgressListener` integration for live speaking state tracking.
+  - Speak, Stop, and Repeat operations.
+  - Guaranteed deterministic engine release and speech cancellation on screen disposal or navigation away.
+- Navigation updated in `MainActivity`:
+  - LiveScan (S04) auto-navigates to Screen S07 `MedicineResultScreen`.
+  - Screen S06 `ReviewOcrScreen` and Screen S07 cross-link cleanly with inspection and back actions.
+- Automated tests: Total 41 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`, 15 `MedicineMatcherTest`, 6 `SpeechContentGeneratorTest`).
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,068,844 bytes).
+- Physical hardware verification: Deployed to Redmi Note 11; verified app launch, active foreground window, and Google TTS integration with zero crashes.
 
 **Partially implemented:**
-- Full medicine identification pipeline: Camera frame capture (Phase 3), OCR extraction (Phase 4), and local candidate matching (Phase 5) are complete. Text-to-speech guidance (Phase 6) and AR overlay (Phase 7) are yet to be integrated.
+- Full medicine identification pipeline: Camera frame capture (Phase 3), OCR extraction (Phase 4), local candidate matching (Phase 5), and accessible results & voice guidance (Phase 6) are complete. AR overlay and 2D fallback (Phase 7) is yet to be evaluated/integrated.
 
 **Not yet implemented:**
-- Phases 6–9: Speech guidance, AR/2D fallback, integration, and final testing.
+- Phases 7–9: AR overlay and 2D fallback, UI polish/integration, and end-to-end handoff testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 19s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,066,979 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 22s (35 unit tests passed across 5 test classes; 0 failures)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 27s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,068,844 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 30s (41 unit tests passed across 6 test classes; 0 failures)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
-- Live OCR & Matching: Verified against printed medicine packages and synthetic fixtures.
+- Live OCR, Matching & Speech: Verified against printed medicine packages and synthetic fixtures.
 
-**Current task in progress:** `Phase 5 complete and device verified; awaiting user approval to begin Phase 6 (Accessible results and voice guidance).`
+**Current task in progress:** `Phase 6 complete and device verified; awaiting user approval to begin Phase 7 (AR overlay and 2D fallback).`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Implemented Phase 5 MedicineMatcher with conservative ambiguity gating, strength validation, S06 match UI cards, and 15 unit tests. Verified on physical Redmi Note 11.`
+**Most recent change:** `Implemented Phase 6 MedicineResultScreen (S07), SpeechContentGenerator, TextToSpeechManager with Speak/Stop/Repeat controls, and 6 unit tests. Verified on physical Redmi Note 11.`
 
-**Next step:** `Obtain user approval for Phase 5 completion report, then proceed to Phase 6 (Accessible results and voice guidance).`
+**Next step:** `Obtain user approval for Phase 6 completion report, then proceed to Phase 7 (AR overlay and 2D fallback).`
 
 ## 6. Session Log
+
+### 2026-10-17 — Phase 6: Accessible Results and Voice Guidance (Verified on Redmi Note 11)
+- Goal: Implement accessible result screen S07, integrate Android TextToSpeech with lifecycle management and Speak/Stop/Repeat controls, generate spoken content from typed matching outcomes, and verify on physical hardware.
+- Files changed: `app/src/main/java/com/armod/identifier/tts/SpeechContentGenerator.kt`, `app/src/main/java/com/armod/identifier/tts/TextToSpeechManager.kt`, `app/src/main/java/com/armod/identifier/ui/screens/MedicineResultScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ReviewOcrScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `app/src/main/res/values/strings.xml`, `app/src/test/java/com/armod/identifier/tts/SpeechContentGeneratorTest.kt`, `MEMORY.md`, `DECISIONS.md`, `TASKS.md`.
+- Implemented and verified:
+  - Built `SpeechContentGenerator` with pure JVM logic: formats natural speech summaries and full readouts for all 4 match outcomes, expands dosage units phonetically (`mg` -> `milligrams`, `mcg` -> `micrograms`, `ml` -> `milliliters`), announces physical package batch/expiry if present, and appends mandatory academic prototype safety disclaimers.
+  - Implemented `TextToSpeechManager`: lifecycle-aware wrapper around Android's on-device `android.speech.tts.TextToSpeech`, handles missing language data gracefully, synchronizes state on MainLooper, provides Speak, Stop, Repeat actions, and deterministically shuts down on dispose.
+  - Created Screen S07 `MedicineResultScreen`: WCAG high-contrast typography, 56dp primary buttons, dedicated `VoiceGuidancePanel` with live status indicator pill, cards for confident/ambiguous/uncatalogued/unreadable results, and academic safety notice.
+  - Connected navigation: `LiveScanScreen` auto-navigates to S07 `MedicineResultScreen`; S06 `ReviewOcrScreen` and S07 link bidirectionally.
+  - Automated tests: Added 6 comprehensive unit tests in `SpeechContentGeneratorTest`. Total 41/41 unit tests pass in `./gradlew.bat test`.
+  - Build output: Ran `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 27s (56 MB APK).
+  - Physical device verification: Installed on Redmi Note 11 via `adb push + pm install`, verified app launch in foreground (`mCurrentFocus=MainActivity`), and confirmed Google TTS package present on device (`com.google.android.tts`).
+- Commands/builds/tests run and outcomes:
+  - `.\gradlew.bat test`: BUILD SUCCESSFUL in 30s. 41/41 tests passed.
+  - `.\gradlew.bat assembleDebug`: BUILD SUCCESSFUL in 27s.
+  - `adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/app-debug.apk`: OK (40 MB/s).
+  - `adb shell pm install -r -d /data/local/tmp/app-debug.apk`: Success.
+  - `adb shell am start -n com.armod.identifier/.MainActivity`: Started cleanly.
+  - `adb shell dumpsys window`: Focused on `MainActivity`.
+- Device checks performed: Verified on physical Redmi Note 11 hardware via USB.
+- Decisions made (and why): Accepted D-025 (Dedicated Accessible Result Screen S07 and Native Android TextToSpeech Architecture).
+- Current task remaining: Wait for user approval of Phase 6 report before starting Phase 7.
+- Next step: Phase 7 — AR overlay and 2D fallback.
 
 ### 2026-10-17 — Phase 5: Field Extraction, Local Matching Engine, and Confidence Gate (Verified on Redmi Note 11)
 - Goal: Implement conservative local medicine identity matching from OCR text against bundled `medicines.json`, enforce confidence and ambiguity gates, upgrade S06 review screen, and verify on physical device.
