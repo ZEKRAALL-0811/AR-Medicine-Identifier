@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.armod.identifier.data.local.JsonMedicineLocalDataSource
+import com.armod.identifier.data.model.MedicineRecord
+import com.armod.identifier.matching.MatchOutcome
+import com.armod.identifier.matching.MedicineMatcher
 import com.armod.identifier.ocr.MlKitOcrProcessor
 import com.armod.identifier.ocr.OcrResult
 import com.armod.identifier.ui.navigation.Screen
@@ -48,8 +53,14 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val context = LocalContext.current
     val ocrProcessor = remember { MlKitOcrProcessor() }
+    val medicineDataSource = remember { JsonMedicineLocalDataSource(context) }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
     var currentOcrResult by remember { mutableStateOf<OcrResult?>(null) }
+    var medicineCatalogue by remember { mutableStateOf<List<MedicineRecord>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        medicineCatalogue = medicineDataSource.getAllMedicines()
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -121,11 +132,20 @@ fun AppNavigation() {
 
         Screen.ReviewOcr -> {
             val result = currentOcrResult ?: OcrResult(rawText = "")
+            val matchOutcome = remember(result, medicineCatalogue) {
+                if (medicineCatalogue.isNotEmpty()) {
+                    MedicineMatcher.match(result, medicineCatalogue)
+                } else {
+                    MatchOutcome.InsufficientText("Loading reference catalogue…")
+                }
+            }
+
             BackHandler {
                 currentScreen = Screen.LiveScan
             }
             ReviewOcrScreen(
                 ocrResult = result,
+                matchOutcome = matchOutcome,
                 onScanAnotherClick = {
                     currentOcrResult = null
                     currentScreen = Screen.LiveScan

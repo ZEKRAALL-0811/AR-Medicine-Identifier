@@ -27,4 +27,13 @@
     <string name="ocr_no_text_desc">The camera could not detect clear printed text on this frame. Ensure the medicine label is steady, 15–25 cm away, with good lighting.</string>
     <string name="scan_another">Scan another package</string>
     <string name="reading_label">Reading label…</string>
+    <string name="match_confirmed_title">Confirmed Catalogue Match</string>
+    <string name="match_uncertain_title">Uncertain / Ambiguous Match</string>
+    <string name="match_none_title">No Reference Match</string>
+    <string name="match_insufficient_title">Insufficient Text</string>
+    <string name="view_monograph">View verified monograph details</string>
+    <string name="hide_monograph">Hide monograph details</string>
+    <string name="warnings_title">Warnings &amp; Precautions</string>
+    <string name="side_effects_title">Common Side Effects</string>
+    <string name="purpose_title">Approved Purpose / Indication</string>
 </resources>

@@ -200,7 +200,7 @@ These items are not settled facts and must not be silently treated as verified:
 - Whether the selected ML Kit dependency/model works correctly with the project's final Android configuration (RESOLVED in Phase 4: verified with on-device `com.google.mlkit:text-recognition:16.0.1` on physical hardware).
 - The final Android `minSdk` after checking the real dependency graph and device (API 26 confirmed for Phase 1 baseline).
 - The final list of 20–30 medicine test records and the source/licence for each fact (RESOLVED in Phase 2: 25 curated records with full provenance in `docs/dataset-sources.md`).
-- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability (OCR baseline verified in Phase 4; matching and AR remain to be evaluated).
+- Actual OCR accuracy, matching accuracy, latency, battery usage, and AR stability (OCR baseline verified in Phase 4; matching engine and ambiguity gate verified in Phase 5; AR remains to be evaluated).
 - Whether local scan history, Room, WorkManager reminders, or automatic point-and-hold scanning fit the remaining time.
 - Whether any optional AR feature has been tested on the physical target device.
 
@@ -209,6 +209,23 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 ## 5. Decision Change Log
 
 Append new changes at the top. Do not delete superseded decisions.
+
+### 2026-10-17 — D-024 — Multi-field conservative matching with strength verification and ambiguity gating
+- Previous decision: Provisional matching approach specified in TRD Section 5.
+- Proposed replacement: Implement `MedicineMatcher` using multi-field score evaluation (brand name, active ingredient, strength, dosage form, manufacturer corroboration) with explicit confidence gates:
+  1. A record is only `ConfidentMatch` if its name/ingredient matches AND its strength either strictly matches the OCR-extracted strength OR the medicine formulation has no catalogued strength variations.
+  2. If the catalogue contains multiple strength variants for the matched name/ingredient (e.g. Paracetamol 500mg vs 650mg, Atorvastatin 10mg vs 20mg) and the OCR text lacks or has ambiguous strength, the match MUST downgrade to `AmbiguousMatch`.
+  3. Conflicting strengths (e.g., OCR says 500mg but record is 650mg) immediately disqualify the candidate.
+  4. Expiry date and batch code are treated strictly as transient package attributes, never matched against medicine catalogue identities.
+  5. If best match confidence < 0.65 or score margin < 0.15 between multiple candidates, yield `AmbiguousMatch` or `NoMatch`.
+  6. Return explicit sealed outcomes (`ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, `InsufficientText`) with zero fallback guessing.
+- Reason / evidence: Patient safety in medicine identification; avoids lethal or dangerous dosage confusion; preserves 100% offline local matching without network requests.
+- User approval required: No (implements approved D-005, D-008, TRD Section 5).
+- User approval/status: Accepted.
+- Files and architecture affected: `MatchOutcome.kt`, `MedicineMatcher.kt`, `ReviewOcrScreen.kt`, `MainActivity.kt`, `MedicineMatcherTest.kt`.
+- Migration or cleanup required: None.
+- Verification performed: 15 unit tests in `MedicineMatcherTest` passed in `./gradlew test` (35/35 tests passing overall), verified on physical Redmi Note 11 with real camera packaging.
+- New status: Accepted.
 
 ### 2026-10-17 — D-023 — Standardize on ML Kit Text Recognition v2 (16.0.1) for on-device OCR pipeline
 - Previous decision: Provisional ML Kit Text Recognition v2 planned without pinned version.

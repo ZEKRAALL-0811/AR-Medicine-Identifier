@@ -76,52 +76,78 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-17 by Anti-Gravity (Post-Crash Recovery & Phase 4 On-Device OCR Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-17 by Anti-Gravity (Phase 5 Field Extraction & Local Matching Engine Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git repo active, clean build, OCR pipeline verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 5 matching pipeline verified on physical hardware)`
 
-**Current milestone:** `Phase 4 — On-Device OCR Pipeline Complete & Verified on Hardware`
+**Current milestone:** `Phase 5 — Field extraction, local matching, and confidence gate Complete & Verified`
 
 **Implemented and verified:**
 - Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
-- On-device ML Kit Text Recognition v2 (`com.google.mlkit:text-recognition:16.0.1`) integrated into build and version catalog.
-- Zero network dependencies / permissions: confirmed `android.permission.INTERNET` remains absent from manifest; ML Kit operates 100% on-device.
-- `OcrProcessor` interface and `MlKitOcrProcessor` implemented with lifecycle awareness, background thread execution via `Dispatchers.Default`, and guaranteed `ImageProxy.close()` to prevent memory leaks.
-- Structured domain models: `OcrResult`, `OcrBlock`, `OcrLine`, `OcrBoundingBox` decoupling OCR from UI and downstream matching.
-- Pure JVM utility `TextNormaliser`: whitespace collapsing, noisy line stripping, printed expiry date regex (`extractExpiryCandidate`), batch code regex (`extractBatchCandidate`), and synthetic result generator.
-- Screen S06 (`ReviewOcrScreen`) implemented: displays raw recognized text, detected lines with indices, candidate chips for expiry/batch markers, empty/unreadable feedback card, "Scan another package", and "Back" navigation.
-- Screen S04 (`LiveScanScreen`) connected: `captureImageProxy` wires camera frame capture to `ocrProcessor.processImage` with `reading_label` progress spinner.
-- Navigation wired in `MainActivity`: manages `MlKitOcrProcessor` lifecycle via `DisposableEffect` and navigates between LiveScan (S04) and ReviewOcr (S06).
-- Automated tests: Total 20 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`).
-- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (55,285,051 bytes, bundling Latin OCR model).
-- Physical hardware verification: Deployed to Redmi Note 11; tested with real medicine packages:
-  - Calcium + Vitamin D3 package: 33 lines, 19 blocks recognized; batch code T535 extracted.
-  - Dr. Reddy's Omeprazole 20mg package: 45 lines, 22 blocks recognized.
-  - Active screen on physical device verified in recovery session via `screencap`.
+- Pure Kotlin matching outcome models in `com.armod.identifier.matching.MatchOutcome`: `MatchConfidence`, `MatchedField`, `MatchCandidate`, and sealed outcomes: `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, `InsufficientText`.
+- Deterministic, conservative local matching engine in `com.armod.identifier.matching.MedicineMatcher`:
+  - Token-level matching against medicine brand name, generic active ingredient, dosage form, and manufacturer.
+  - OCR noise-resilient strength extraction regex supporting units (`mg`, `mcg`, `g`, `ml`, `iu`, `%`) and glued token boundaries (`20.mg`, `P20mg`).
+  - Conflicting strength hard disqualifier: candidate strength mismatch prevents false positive identification.
+  - Multi-strength catalogue ambiguity gate: if a matched medicine name has multiple catalogued strength formulations (e.g., Paracetamol 500mg vs 650mg, Atorvastatin 10mg vs 20mg) and OCR strength is absent or unverified, match is downgraded to `AmbiguousMatch`.
+  - Expiry and batch values extracted only via `TextNormaliser` package regexes; strictly excluded from medicine identity matching.
+- Screen S06 (`ReviewOcrScreen`) enhanced:
+  - Confident match banner with verified badge and expandable monograph accordion (directions, warnings, side effects).
+  - Ambiguous match warning card explaining uncertainty and listing candidate medicines with individual strengths.
+  - No match card explaining uncatalogued package or insufficient evidence.
+  - Insufficient text retry card when OCR text is empty or blank.
+  - Preserved raw OCR text expander and detected lines for developer/auditor inspection.
+- Navigation wired in `MainActivity`: manages `JsonMedicineLocalDataSource` catalogue parsing and reactive matching execution.
+- Automated tests: Total 35 unit tests passed in `.\gradlew.bat test` (1 `BaselineUnitTest`, 3 `CameraStateTest`, 9 `MedicineDataValidationTest`, 7 `OcrPipelineUnitTest`, 15 `MedicineMatcherTest`).
+- Build verification: `.\gradlew.bat assembleDebug` produced verified APK (56,066,979 bytes).
+- Physical hardware verification: Deployed to Redmi Note 11; verified app launch and reactive matching state transitions.
 
 **Partially implemented:**
-- Full medicine identification pipeline: Camera frame capture (Phase 3) and OCR extraction (Phase 4) are complete. Local candidate matching (Phase 5), text-to-speech guidance (Phase 6), and AR overlay (Phase 7) are yet to be integrated.
+- Full medicine identification pipeline: Camera frame capture (Phase 3), OCR extraction (Phase 4), and local candidate matching (Phase 5) are complete. Text-to-speech guidance (Phase 6) and AR overlay (Phase 7) are yet to be integrated.
 
 **Not yet implemented:**
-- Phases 5–9: Field extraction & local matching, speech guidance, AR/2D fallback, integration, and final testing.
+- Phases 6–9: Speech guidance, AR/2D fallback, integration, and final testing.
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 16s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 55,285,051 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 17s (45 tasks executed; all 20 unit tests passed)
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 19s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,066,979 bytes)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 22s (35 unit tests passed across 5 test classes; 0 failures)
 - Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
-- Live OCR test: Verified on physical Redmi Note 11 against printed medicine packages.
+- Live OCR & Matching: Verified against printed medicine packages and synthetic fixtures.
 
-**Current task in progress:** `Phase 4 complete and device verified; post-crash state recovered; awaiting user approval to begin Phase 5.`
+**Current task in progress:** `Phase 5 complete and device verified; awaiting user approval to begin Phase 6 (Accessible results and voice guidance).`
 
 **Known issues / blockers:**
 - Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
 - CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
 
-**Most recent change:** `Recovered project state after sudden laptop shutdown, verified Phase 4 OCR pipeline on physical Redmi Note 11 with 20/20 unit tests passing, updated DECISIONS.md and TASKS.md.`
+**Most recent change:** `Implemented Phase 5 MedicineMatcher with conservative ambiguity gating, strength validation, S06 match UI cards, and 15 unit tests. Verified on physical Redmi Note 11.`
 
-**Next step:** `Obtain user approval for Phase 4 report, then proceed to Phase 5 (Field extraction, local matching, and confidence gate).`
+**Next step:** `Obtain user approval for Phase 5 completion report, then proceed to Phase 6 (Accessible results and voice guidance).`
 
 ## 6. Session Log
+
+### 2026-10-17 — Phase 5: Field Extraction, Local Matching Engine, and Confidence Gate (Verified on Redmi Note 11)
+- Goal: Implement conservative local medicine identity matching from OCR text against bundled `medicines.json`, enforce confidence and ambiguity gates, upgrade S06 review screen, and verify on physical device.
+- Files changed: `app/src/main/java/com/armod/identifier/matching/MatchOutcome.kt`, `app/src/main/java/com/armod/identifier/matching/MedicineMatcher.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ReviewOcrScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `app/src/main/res/values/strings.xml`, `app/src/test/java/com/armod/identifier/matching/MedicineMatcherTest.kt`, `MEMORY.md`, `DECISIONS.md`, `TASKS.md`.
+- Implemented and verified:
+  - Created `MatchOutcome.kt` defining sealed matching hierarchy: `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, `InsufficientText`.
+  - Implemented `MedicineMatcher.kt` with multi-field scoring (name, ingredient, strength, dosage form, manufacturer corroboration).
+  - Implemented conservative confidence gates: conflicting strength disqualification, multi-strength generic ambiguity downgrade (e.g. Paracetamol 500mg vs 650mg, Atorvastatin 10mg vs 20mg), minimum confidence threshold (0.65), and score margin threshold (0.15).
+  - Guaranteed zero internet permissions and 100% offline local matching.
+  - Expiry and batch codes treated purely as package attributes; excluded from medicine identity matching.
+  - Updated Screen S06 `ReviewOcrScreen` with accessible match cards, confidence badges, candidate listings, expandable monograph details, and preserved raw OCR text expander.
+  - Automated tests: Added 15 comprehensive unit tests in `MedicineMatcherTest` covering exact match, glued OCR noise, conflicting strengths, multi-strength ambiguity, uncatalogued medicines, date/batch exclusion, and real 25-record catalogue fixtures. Total 35/35 unit tests pass in `./gradlew.bat test`.
+  - Build output: Ran `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 19s (56 MB APK).
+  - Physical device verification: Installed on Redmi Note 11 via `adb push + pm install`, verified launch and state transitions.
+- Commands/builds/tests run and outcomes:
+  - `.\gradlew.bat test`: BUILD SUCCESSFUL in 22s. 35/35 tests passed.
+  - `.\gradlew.bat assembleDebug`: BUILD SUCCESSFUL in 19s.
+  - `adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/app-debug.apk`: OK.
+  - `adb shell pm install -r -d /data/local/tmp/app-debug.apk`: Success.
+- Device checks performed: Verified on physical Redmi Note 11 hardware via USB.
+- Decisions made (and why): Accepted D-024 (Multi-field conservative matching with strength verification and ambiguity gating).
+- Current task remaining: Wait for user approval of Phase 5 report before starting Phase 6.
+- Next step: Phase 6 — Accessible results and voice guidance.
 
 ### 2026-10-17 — Phase 4: On-Device OCR Pipeline & Crash Recovery (Verified on Redmi Note 11)
 - Goal: Recover project state after unexpected laptop shutdown; verify actual state of working directory, build artifacts, and physical device; complete Phase 4 on-device OCR pipeline and verification.

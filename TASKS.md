@@ -151,20 +151,36 @@
 
 ## Phase 5 — Field extraction, local matching, and confidence gate
 
-- [ ] Extract only supported fields from OCR text; preserve an unknown/unreadable state when a field cannot be read.
-- [ ] Normalize text for matching without discarding meaningful distinctions.
-- [ ] Match OCR results against the bundled local dataset.
-- [ ] Implement a conservative confidence/ambiguity gate.
-- [ ] Show a single result only when the evidence meets the defined threshold; otherwise show possible matches or ask the user to retake the image.
-- [ ] Ensure low-confidence matches are never presented as certain.
-- [ ] Do not infer expiry dates or other fields that OCR cannot support.
+- [x] Extract only supported fields from OCR text; preserve an unknown/unreadable state when a field cannot be read.
+- [x] Normalize text for matching without discarding meaningful distinctions.
+- [x] Match OCR results against the bundled local dataset.
+- [x] Implement a conservative confidence/ambiguity gate.
+- [x] Show a single result only when the evidence meets the defined threshold; otherwise show possible matches or ask the user to retake the image.
+- [x] Ensure low-confidence matches are never presented as certain.
+- [x] Do not infer expiry dates or other fields that OCR cannot support.
 
 **Phase verification**
-- [ ] Tests cover confident match, ambiguous match, no match, and unreadable fields.
-- [ ] Low-confidence cases cannot be presented as confirmed identity.
-- [ ] Matching works with network disabled.
+- [x] Tests cover confident match, ambiguous match, no match, and unreadable fields.
+- [x] Low-confidence cases cannot be presented as confirmed identity.
+- [x] Matching works with network disabled.
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Created `com.armod.identifier.matching.MatchOutcome` with typed outcomes: `ConfidentMatch`, `AmbiguousMatch`, `NoMatch`, and `InsufficientText`.
+- Implemented `com.armod.identifier.matching.MedicineMatcher`:
+  - Token-level matching against brand names, generic active ingredients, dosage forms, and manufacturers.
+  - Regex extraction for numerical strength and units (`mg`, `mcg`, `g`, `ml`, `iu`, `%`), including OCR glued token resilience (`20.mg`, `P20mg`).
+  - Conflicting strength hard disqualifier: candidate strength mismatch prevents false identification.
+  - Multi-strength catalogue ambiguity gate: if a matched medicine name has multiple catalogued strength formulations (e.g., Paracetamol 500mg vs 650mg, Atorvastatin 10mg vs 20mg) and OCR strength is absent or unverified, match is downgraded to `AmbiguousMatch`.
+  - Expiry and batch values extracted only via `TextNormaliser` package regexes; strictly excluded from medicine identity matching.
+- Screen S06 `ReviewOcrScreen` updated with:
+  - Confident match banner with green accents, verified badges, and expandable monograph accordion (directions, warnings, side effects).
+  - Ambiguous match warning card explaining uncertainty and listing candidates with individual strengths and forms.
+  - No match card explaining uncatalogued package or insufficient evidence.
+  - Insufficient text retry card when OCR text is empty or blank.
+  - Preserved raw OCR text expander and detected lines for developer/auditor inspection.
+- Unit tests: Added 15 unit tests in `MedicineMatcherTest` covering exact match, glued OCR noise, conflicting strengths, multi-strength ambiguity, uncatalogued medicines, date/batch exclusion, and real 25-record catalogue fixtures. Total 35/35 unit tests pass in `./gradlew.bat test`.
+- Build: `./gradlew.bat assembleDebug` succeeded in 19s (APK: 56,066,979 bytes).
+- Hardware verification: Installed debug APK on connected Redmi Note 11 (Android 13 / API 33, ADB ID `79145af9`). Confirmed `MainActivity` launch and reactive matching state transitions.
 
 ## Phase 6 — Accessible results and voice guidance
 
@@ -236,6 +252,6 @@
 
 ## Current blocker / next action
 
-**Next phase to execute:** Phase 5 — Field extraction, local matching, and confidence gate (pending user approval).  
-**Current implementation status:** Phase 4 (On-device OCR pipeline) complete and verified on physical Redmi Note 11 hardware. 20/20 unit tests passing.  
+**Next phase to execute:** Phase 6 — Accessible results and voice guidance (pending user approval).  
+**Current implementation status:** Phase 5 (Field extraction, local matching, and confidence gate) complete and verified on physical Redmi Note 11 hardware. 35/35 unit tests passing.  
 **Do not pre-check any implementation task.**
