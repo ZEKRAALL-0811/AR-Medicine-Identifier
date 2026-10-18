@@ -78,7 +78,7 @@ At session start, verify which of these files are actually present in the reposi
 
 **Last verified:** `2026-10-18 by Anti-Gravity (Phase 7 Acceptance Review Complete & Verified on Physical Redmi Note 11)`
 
-**Repository / branch:** `d:\ARVR Project (Git master branch, Phase 7 Acceptance Review complete and verified on physical hardware)`
+**Repository / branch:** `d:\ARVR Project (Git main & master branches, synchronized with origin https://github.com/ZEKRAALL-0811/AR-Medicine-Identifier)`
 
 **Current milestone:** `Phase 7 — AR overlay and 2D fallback (Acceptance Review Verified; awaiting explicit approval before Phase 8)`
 
