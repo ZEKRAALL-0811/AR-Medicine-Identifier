@@ -83,14 +83,16 @@ At session start, verify which of these files are actually present in the reposi
 **Current milestone:** `Phase 7 — AR overlay and 2D fallback (Acceptance Review Verified; awaiting explicit approval before Phase 8)`
 
 **Implemented and verified:**
-- Physical device verified: Redmi Note 11 (2201117TI / spes_in), Android 13 (API 33), ADB ID `79145af9`.
+- Physical devices verified:
+  - **Samsung Galaxy F13** (SM-E135F / m13dd, Android 14 / API 34, ADB ID `RZ8WA00694L`): Target device reconnected, authorized, installed with latest build, launched, and verified live (`samsung_f13_welcome.png`, `samsung_f13_ar_fallback.png`, `samsung_f13_result.png`). Confirmed graceful ARCore fallback to 2D accessible mode without crashing.
+  - **Redmi Note 11** (2201117TI / spes_in, Android 13 / API 33, ADB ID `79145af9`): Live OpenGL camera background and AR tracking loop verified.
 - Phase 7 Acceptance Review Audit & Implementation:
   - Audit: Initial Phase 7 screen initialized the ARCore session and displayed Compose cards, but lacked an OpenGL ES background renderer to draw the hardware camera feed texture, leaving the background dark and tracking static.
   - Corrected with `ArCameraSurfaceView` and `ArCameraRenderer`: Allocates external `GL_TEXTURE_EXTERNAL_OES` texture, registers texture name with `session.setCameraTextureName(textureId)`, calls `session.update()` on every frame in `onDrawFrame`, transforms quad coordinates using `frame.transformCoordinates2d(Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, ...)`, and renders the live hardware camera feed quad behind the Compose UI.
   - Dynamic Tracking Pipeline: In `ArSessionManager.updateFromFrame(frame)`, camera tracking state is pulled from each live ARCore frame (`TrackingState.TRACKING` -> "AR Tracking Active"; `TrackingState.PAUSED` with failure reasons `INSUFFICIENT_LIGHT` -> "Low lighting: improve illumination", `EXCESSIVE_MOTION`, etc.) and dispatched thread-safely to Compose via main-looper Handler.
   - SurfaceView & Compose Layering: Added `setZOrderMediaOverlay(true)` and `setWillNotDraw(false)` to `GLSurfaceView`, and replaced root `Surface(color = MaterialTheme.colorScheme.background)` with `Box` in `MainActivity.kt` to prevent Compose's `CompositingStrategy.Offscreen` from occluding the hardware camera surface.
   - Verified on physical hardware: `screen_ar_live_overlay2.png` captured on Redmi Note 11 shows the real physical desk and laptop keyboard visible behind the semi-translucent Compose overlay, with crisp, high-contrast medicine information ("Omez 20 mg Capsule", Omeprazole, Batch: T535, Exp: 12/2027) and green "AR Tracking Active" status pill.
-  - Live tracking recovery tested: When the device faced a dark surface, tracking dynamically transitioned to amber warning "Low lighting: improve illumination" (`screen_ar_live_camera.png`); upon lifting and pointing into the room, it immediately recovered to green "AR Tracking Active".
+  - Verified on Samsung Galaxy F13: `samsung_f13_ar_fallback.png` shows typed `ArAvailabilityChecker` detecting non-ARCore chipset gracefully, displaying `2D Camera Fallback Active` and zero crashes.
   - Feature Clarification: Accurately described and implemented as a high-contrast camera-view overlay with live ARCore surface tracking and diagnostics, rather than claiming false 3D anchor stabilization.
   - Preserved 2D fallback and offline compliance: Seamless bidirectional switching to Screen S07 `MedicineResultScreen`; zero network permissions in merged manifest (`android.permission.INTERNET` and `ACCESS_NETWORK_STATE` strictly absent).
 - Automated tests: Total 47 unit tests passed in `.\gradlew.bat test`.
@@ -105,19 +107,19 @@ At session start, verify which of these files are actually present in the reposi
 **Build and test status:**
 - Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 26s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,361,256 bytes)
 - Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 39s (47 unit tests passed across 7 test classes; 0 failures)
-- Device launch & physical test: Fully verified on connected Redmi Note 11 (Android 13 / API 33).
+- Device launch & physical test: Fully verified on primary target device Samsung Galaxy F13 (Android 14 / API 34) and development device Redmi Note 11 (Android 13 / API 33).
 - Live AR camera background and tracking: Verified on physical device (`screen_ar_live_overlay2.png`).
+- 2D accessible fallback: Verified on Samsung Galaxy F13 (`samsung_f13_ar_fallback.png` and `samsung_f13_result.png`).
 
-**Current task in progress:** `Phase 7 acceptance review complete and verified on device; stopped and awaiting explicit user approval before beginning Phase 8.`
+**Current task in progress:** `Samsung Galaxy F13 updated and running latest build; ready for Phase 8.`
 
 **Known issues / blockers:**
-- Primary target device Samsung Galaxy F13 is currently unavailable; temporary physical testing is active and verified on Redmi Note 11 (Android 13 / API 33) per user instruction.
-- Samsung Galaxy F13 does not support ARCore (Exynos 850); 2D fallback is verified and will serve as primary mode on Galaxy F13.
-- CPU virtualization remains disabled in laptop BIOS (AVD emulator cannot run locally; physical USB testing is primary).
+- Samsung Galaxy F13 does not support ARCore (Exynos 850); 2D fallback is active, verified, and serves as the primary mode on Galaxy F13.
+- CPU virtualization remains disabled in laptop BIOS (physical USB testing on Samsung F13 is primary).
 
-**Most recent change:** `Phase 7 Acceptance Review: Implemented OpenGL ES 2.0 camera background rendering (ArCameraSurfaceView, ArCameraRenderer) and dynamic ARCore frame tracking loop; resolved Compose SurfaceView hole-punching conflict; verified live camera feed and real-time tracking on physical Redmi Note 11.`
+**Most recent change:** `Installed and launched latest build on primary target device Samsung Galaxy F13 (Android 14 / API 34). Verified Welcome Screen, S07 Result Screen, and 2D fallback.`
 
-**Next step:** `Stop and report Phase 7 Acceptance Review findings to user. Await explicit approval before Phase 8.`
+**Next step:** `Await user instruction to proceed with Phase 8 (UI polish, integration, and edge cases).`
 
 ## 6. Session Log
 
