@@ -11,12 +11,12 @@ import com.armod.identifier.ocr.OcrResult
 object TextNormaliser {
 
     private val EXPIRY_REGEX = Regex(
-        pattern = """\b(?:EXP|EXPIRY|EXP\.|EXP DATE|USE BY|UB)[ :.-]*([0-9]{2}[/-][0-9]{2,4})\b""",
+        pattern = """\b(?:EXPIRY|EXP\.?\s*DATE|EXP\.|EXP|USE BY|USE BEFORE|UB)[ :.-]*([0-9]{2}[/-][0-9]{2,4})\b""",
         options = setOf(RegexOption.IGNORE_CASE)
     )
 
     private val BATCH_REGEX = Regex(
-        pattern = """\b(?:BATCH\s*NO\.?|BATCH|LOT\.?|B\.?\s*NO\.?)\s*[:.-]*\s*([A-Z0-9]+)\b""",
+        pattern = """\b(?:BATCH\s*NO\.?|BATCH|LOT\.?|B\.?\s*NO\.?)\s*[:.-]*\s*([A-Z0-9]+(?:-[A-Z0-9]+)*)\b""",
         options = setOf(RegexOption.IGNORE_CASE)
     )
 

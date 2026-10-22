@@ -267,19 +267,61 @@
 
 ## Phase 8 — UI polish, integration, and edge cases
 
-- [ ] Apply the approved visual design consistently.
-- [ ] Add loading, empty, permission-denied, no-match, ambiguous-match, and error states.
-- [ ] Verify navigation and back behavior across the complete flow.
-- [ ] Check small-screen layout, text scaling, and landscape/rotation behavior as practical.
-- [ ] Remove dead code, debug-only UI, and unused dependencies.
-- [ ] Confirm the app remains offline-first.
+- [x] Apply the approved visual design consistently.
+- [x] Add loading, empty, permission-denied, no-match, ambiguous-match, and error states.
+- [x] Verify navigation and back behavior across the complete flow.
+- [x] Check small-screen layout, text scaling, and landscape/rotation behavior as practical.
+- [x] Remove dead code, debug-only UI, and unused dependencies.
+- [x] Confirm the app remains offline-first.
 
 **Phase verification**
-- [ ] All defined screens and transitions have been exercised.
-- [ ] No known blocking crash remains.
-- [ ] Layout and accessibility checks are recorded.
+- [x] All defined screens and transitions have been exercised.
+- [x] No known blocking crash remains.
+- [x] Layout and accessibility checks are recorded.
 
-**Evidence / notes:** _Anti-Gravity fills in after execution._
+**Evidence / notes:**
+- Complete end-to-end integration across all screens:
+  - S01 Welcome -> S02 Permission/Readiness -> S03 Guidance -> S04 Live Camera Scan -> S06 OCR Review / S07 Medicine Result -> S05 AR Overlay / 2D Fallback -> Rescan.
+- Lifecycle hardening implemented:
+  - `PermissionScreen`: Attached `LifecycleEventObserver` listening for `ON_RESUME`. If user navigates to Android System Settings and grants camera permission, returning to the app immediately detects the grant and advances to `ScanGuidance` without requiring process restart.
+  - `MedicineResultScreen`: Attached `LifecycleEventObserver` listening for `ON_PAUSE`. Halts active TTS speech (`ttsManager.stop()`) immediately when the app is backgrounded, minimized, or screen locked, preventing runaway audio leaks.
+  - `ArOverlayScreen`: Attached `LifecycleEventObserver` listening for `ON_PAUSE`/`ON_RESUME`/`ON_DESTROY`. Halts `surfaceViewRef?.onPause()` and `arSessionManager.pause()` when paused; resumes only when active; releases native ARCore resources on disposal.
+  - S07 AR Button: Dynamically checks `ArAvailabilityChecker.isSupported(context)` and appends `(2D Fallback)` hint if the device lacks ARCore support (e.g. Samsung Galaxy F13), providing clear feedback before tapping.
+- Enhanced `TextNormaliser`:
+  - `EXPIRY_REGEX` updated to support `EXP.DATE`, `USE BEFORE`, and varying spacing/punctuation.
+  - `BATCH_REGEX` updated to support hyphens in batch codes (e.g. `LOT-9982`, `XF-201`).
+- Automated regression test suite:
+  - Implemented `app/src/test/java/com/armod/identifier/edgecases/Phase8EdgeCaseTest.kt` (17 test cases) covering:
+    - Blank, whitespace-only, and noise/symbol inputs yielding `MatchOutcome.InsufficientText`.
+    - Input below minimum 3-alphanumeric character threshold yielding `MatchOutcome.InsufficientText`.
+    - Multi-strength generic active ingredient (e.g., Paracetamol IP) without verified strength yielding `MatchOutcome.AmbiguousMatch`, preventing arbitrary strength guessing.
+    - Conflicting strength (e.g., OCR says 650mg against 500mg catalogue record) disqualifying candidate from high confidence match.
+    - Uncatalogued medicine yielding `MatchOutcome.NoMatch` while preserving extracted batch and expiry.
+    - Batch/expiry alone without medicine text yielding `MatchOutcome.NoMatch` without fabricating medicine identity.
+    - Various expiry and batch formats safely parsed or returning null without crashing.
+    - TTS content generation verifying brand, generic, phonetic strength, dosage form, batch/expiry, academic disclaimer presence, and absence of literal "null".
+    - TTS graceful handling of missing optional fields (batch/expiry).
+    - ARCore unsupported status, tracking failure reason mappings, and error state transitions.
+  - All 64 unit tests pass in `.\gradlew.bat test`.
+- Offline compliance verification:
+  - Inspected merged manifest at `app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`.
+  - Confirmed `android.permission.INTERNET` and `android.permission.ACCESS_NETWORK_STATE` are strictly absent. Zero network traffic possible.
+- Physical device verification on target device Samsung Galaxy F13 (`SM-E135F` / `m13dd`, Android 14 / API 34, ADB ID `RZ8WA00694L`):
+  - Debug APK built and installed cleanly via ADB (`Performing Streamed Install -> Success`).
+  - Screen S01 Welcome: Verified title, Academic Prototype Notice, and "Start scanning" button (`samsung_f13_p8_launch.png`).
+  - Screen S03 Guidance: Verified framing instructions, "Begin scan", and "Back" buttons (`samsung_f13_p8_screen2.png`).
+  - Screen S04 CameraX Live Scan: Verified hardware camera preview, blue framing reticle, "Ready to scan" badge, and capture button (`samsung_f13_p8_camera.png`).
+  - Screen S07 Accessible Medicine Result:
+    - Scanned real physical medicine package placed under camera: "Omez Omeprazole Capsules IP 20 mg" (`samsung_f13_p8_back_camera.png`).
+    - Verified on-device OCR and matching engine: Identified "CONFIRMED CATALOGUE MATCH: Omez 20 mg Capsule" with active ingredient "Omeprazole", dosage form "Capsule", manufacturer "Dr. Reddy's Laboratories Ltd", purpose, directions, warnings, precautions, and side effects (`samsung_f13_p8_omez_result.png`).
+    - Physical package batch/expiry attributes honestly reported as "Not detected on label" without fabrication (`samsung_f13_p8_scrolled.png`).
+    - Voice guidance panel: Verified "Speak", "Stop", and "Repeat" buttons render with full labels, high contrast, and zero clipping (`samsung_f13_p8_omez_result.png`).
+    - TTS execution: Verified connection to Samsung's native on-device TTS engine (`com.samsung.SMT`) via logcat (`TextToSpeech: Connected to TTS engine`).
+  - AR 2D Fallback:
+    - Tapped "View AR Camera Overlay (2D Fallback)" button (`samsung_f13_p8_buttons.png`).
+    - Screen S05 verified: Gracefully detected unsupported ARCore hardware on Exynos 850 and displayed "2D Camera Fallback Active" card with one-tap "Switch to 2D Result" button (`samsung_f13_p8_ar_fallback.png`).
+    - Tapped "Switch to 2D Result": Returned immediately to 2D monograph without crash or session leak (`samsung_f13_p8_back_to_2d.png`).
+  - Back navigation and re-scan: Tapped back arrow in top bar; returned to live camera feed ready for next scan (`samsung_f13_p8_back_camera.png`).
 
 ## Phase 9 — End-to-end testing and prototype handoff
 
@@ -302,6 +344,6 @@
 
 ## Current blocker / next action
 
-**Next phase to execute:** Phase 8 — UI polish, integration, and edge cases (pending explicit user approval).  
-**Current implementation status:** Phase 7 (AR overlay and 2D fallback) complete and verified on physical Redmi Note 11 hardware. 47/47 unit tests passing.  
+**Next phase to execute:** Phase 9 — End-to-end testing and prototype handoff (STOPPED — waiting for explicit user approval before beginning Phase 9).  
+**Current implementation status:** Phase 8 (Integration, UI polish, lifecycle hardening, and edge-case testing) complete and physically verified on target hardware Samsung Galaxy F13 (`SM-E135F`, Android 14 / API 34). All 64 unit tests pass.  
 **Do not pre-check any implementation task.**

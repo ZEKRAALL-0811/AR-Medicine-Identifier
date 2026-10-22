@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.armod.identifier.R
 import com.armod.identifier.ui.theme.PrimaryBlue
 import com.armod.identifier.ui.theme.StatusError
@@ -84,11 +88,20 @@ fun PermissionScreen(
         }
     }
 
-    // Auto-check on entry: if already granted, advance immediately
-    LaunchedEffect(Unit) {
-        val currentStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-        if (currentStatus == PackageManager.PERMISSION_GRANTED) {
-            onPermissionGranted()
+    // Auto-check on entry and whenever the activity resumes (e.g., returning from Android Settings)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val currentStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                if (currentStatus == PackageManager.PERMISSION_GRANTED) {
+                    onPermissionGranted()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

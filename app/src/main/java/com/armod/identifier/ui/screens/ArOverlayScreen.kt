@@ -59,6 +59,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.armod.identifier.R
 import com.armod.identifier.ar.ArAvailabilityChecker
 import com.armod.identifier.ar.ArAvailabilityStatus
@@ -122,8 +125,27 @@ fun ArOverlayScreen(
         }
     }
 
-    DisposableEffect(Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    if (arSessionState is ArSessionState.Active) {
+                        surfaceViewRef?.onResume()
+                        arSessionManager.resume()
+                    }
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    surfaceViewRef?.onPause()
+                    arSessionManager.pause()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             surfaceViewRef?.onPause()
             arSessionManager.destroy()
         }

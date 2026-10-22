@@ -210,6 +210,25 @@ Anti-Gravity should move an item out of this section only after it is resolved b
 
 Append new changes at the top. Do not delete superseded decisions.
 
+### 2026-10-22 — D-028 — End-to-End Integration, Lifecycle Hardening, and Edge-Case Recovery
+- Previous decision: Features developed across Phases 1–7 had separate lifecycle listeners and manual fallback transitions.
+- Proposed replacement:
+  1. Complete end-to-end integration across all screens (Welcome -> Readiness/Permission -> Guidance -> Live Camera -> OCR Review / Medicine Result -> AR Overlay / 2D Fallback).
+  2. Implement lifecycle-aware observer in `PermissionScreen` on `ON_RESUME`: automatically verifies camera permission when returning from Android System Settings and immediately transitions to Scan Guidance without requiring app restart.
+  3. Implement lifecycle-aware observer in `MedicineResultScreen` on `ON_PAUSE`: automatically halts active Text-to-Speech playback (`ttsManager.stop()`) when the app is backgrounded, minimized, or screen locked.
+  4. Implement lifecycle-aware observer in `ArOverlayScreen`: halts GL rendering (`surfaceView.onPause()`) and pauses ARCore session on `ON_PAUSE`; safely resumes on `ON_RESUME` only if active; safely destroys native resources on screen disposal.
+  5. Enhanced `TextNormaliser` regexes to support hyphens in batch numbers (e.g. `LOT-9982`, `XF-201`) and alternative expiration prefixes (e.g. `EXP.DATE`, `USE BEFORE`).
+  6. Added comprehensive edge-case test suite `Phase8EdgeCaseTest` (17 test cases, 64 unit tests total) covering blank/garbled/noise inputs, conflicting strengths, multi-strength generic ambiguity, missing batch/expiry, TTS content null-safety, and ARCore fallback mappings.
+  7. Physically verified end-to-end workflow on the primary target device, Samsung Galaxy F13 (`SM-E135F`, Android 14 / API 34), including live physical camera scanning of an actual "Omez 20mg Capsule" strip, confirming on-device OCR, catalogue matching, TTS synthesis, and graceful 2D fallback.
+  8. Strictly verified zero network permissions (`android.permission.INTERNET` absent in merged manifest).
+- Reason / evidence: Guarantees rock-solid stability, zero audio or camera session leaks, safe handling of missing/conflicting medicine attributes, and verified physical hardware execution on the target device.
+- User approval required: No (implements authorized Phase 8).
+- User approval/status: Accepted.
+- Files and architecture affected: `PermissionScreen.kt`, `MedicineResultScreen.kt`, `ArOverlayScreen.kt`, `TextNormaliser.kt`, `Phase8EdgeCaseTest.kt`.
+- Migration or cleanup required: None.
+- Verification performed: All 64 unit tests passed in `.\gradlew.bat test`, debug APK assembled in `.\gradlew.bat assembleDebug`, installed and verified live on Samsung Galaxy F13 (`RZ8WA00694L`).
+- New status: Accepted.
+
 ### 2026-10-18 — D-027 — OpenGL ES 2.0 Live Camera Background Rendering and Real-Time ARCore VIO Tracking for AR Overlay Screen
 - Previous decision: D-026 initialized the ARCore session and displayed Compose UI overlay with static tracking label over an empty canvas.
 - Proposed replacement:

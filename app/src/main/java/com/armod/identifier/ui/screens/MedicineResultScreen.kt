@@ -60,6 +60,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.armod.identifier.R
 import com.armod.identifier.data.model.MedicineRecord
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.armod.identifier.ar.ArAvailabilityChecker
+import com.armod.identifier.ar.ArAvailabilityStatus
 import com.armod.identifier.matching.MatchCandidate
 import com.armod.identifier.matching.MatchOutcome
 import com.armod.identifier.ocr.OcrResult
@@ -110,9 +115,17 @@ fun MedicineResultScreen(
         }
     }
 
-    // Deterministically halt speech and release TTS engine when navigating away
-    DisposableEffect(Unit) {
+    // Deterministically halt speech on pause (app minimize/screen lock) and release TTS engine on dispose
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                ttsManager.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             ttsManager.stop()
             ttsManager.release()
         }
@@ -237,6 +250,9 @@ fun MedicineResultScreen(
 
             if (onViewArClick != null) {
                 val isDark = isSystemInDarkTheme()
+                val isArSupported = remember {
+                    ArAvailabilityChecker.checkAvailability(context) is ArAvailabilityStatus.SupportedAndInstalled
+                }
                 Button(
                     onClick = {
                         ttsManager.stop()
@@ -246,7 +262,11 @@ fun MedicineResultScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .semantics {
-                            contentDescription = "View augmented reality camera overlay for this medicine"
+                            contentDescription = if (isArSupported) {
+                                "View augmented reality camera overlay for this medicine"
+                            } else {
+                                "View AR status and 2D camera fallback details"
+                            }
                         },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -261,7 +281,11 @@ fun MedicineResultScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.ar_view_ar_overlay),
+                        text = if (isArSupported) {
+                            stringResource(R.string.ar_view_ar_overlay)
+                        } else {
+                            "${stringResource(R.string.ar_view_ar_overlay)} (2D Fallback)"
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )

@@ -76,70 +76,97 @@ At session start, verify which of these files are actually present in the reposi
 
 ## 5. Current State — Anti-Gravity Must Maintain This Section
 
-**Last verified:** `2026-10-18 by Anti-Gravity (Phase 7 Acceptance Review Complete & Verified on Physical Redmi Note 11)`
+**Last verified:** `2026-10-22 by Anti-Gravity (Phase 8 Complete & Verified on Physical Samsung Galaxy F13)`
 
 **Repository / branch:** `d:\ARVR Project (Git main & master branches, synchronized with origin https://github.com/ZEKRAALL-0811/AR-Medicine-Identifier)`
 
-**Current milestone:** `Phase 7 — AR overlay and 2D fallback (Acceptance Review Verified; awaiting explicit approval before Phase 8)`
+**Current milestone:** `Phase 8 — Integration, UI Polish, Lifecycle Hardening, and Edge-Case Testing (COMPLETED; awaiting explicit approval before Phase 9)`
 
 **Implemented and verified:**
-- Physical devices verified:
-  - **Samsung Galaxy F13** (SM-E135F / m13dd, Android 14 / API 34, ADB ID `RZ8WA00694L`): Target device reconnected, authorized, installed with latest build, launched, and verified live (`samsung_f13_welcome.png`, `samsung_f13_ar_fallback.png`, `samsung_f13_result.png`). Confirmed graceful ARCore fallback to 2D accessible mode without crashing.
-  - **Redmi Note 11** (2201117TI / spes_in, Android 13 / API 33, ADB ID `79145af9`): Live OpenGL camera background and AR tracking loop verified.
-- Phase 7 Acceptance Review Audit & Implementation:
-  - Audit: Initial Phase 7 screen initialized the ARCore session and displayed Compose cards, but lacked an OpenGL ES background renderer to draw the hardware camera feed texture, leaving the background dark and tracking static.
-  - Corrected with `ArCameraSurfaceView` and `ArCameraRenderer`: Allocates external `GL_TEXTURE_EXTERNAL_OES` texture, registers texture name with `session.setCameraTextureName(textureId)`, calls `session.update()` on every frame in `onDrawFrame`, transforms quad coordinates using `frame.transformCoordinates2d(Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, ...)`, and renders the live hardware camera feed quad behind the Compose UI.
-  - Dynamic Tracking Pipeline: In `ArSessionManager.updateFromFrame(frame)`, camera tracking state is pulled from each live ARCore frame (`TrackingState.TRACKING` -> "AR Tracking Active"; `TrackingState.PAUSED` with failure reasons `INSUFFICIENT_LIGHT` -> "Low lighting: improve illumination", `EXCESSIVE_MOTION`, etc.) and dispatched thread-safely to Compose via main-looper Handler.
-  - SurfaceView & Compose Layering: Added `setZOrderMediaOverlay(true)` and `setWillNotDraw(false)` to `GLSurfaceView`, and replaced root `Surface(color = MaterialTheme.colorScheme.background)` with `Box` in `MainActivity.kt` to prevent Compose's `CompositingStrategy.Offscreen` from occluding the hardware camera surface.
-  - Verified on physical hardware: `screen_ar_live_overlay2.png` captured on Redmi Note 11 shows the real physical desk and laptop keyboard visible behind the semi-translucent Compose overlay, with crisp, high-contrast medicine information ("Omez 20 mg Capsule", Omeprazole, Batch: T535, Exp: 12/2027) and green "AR Tracking Active" status pill.
-  - Verified on Samsung Galaxy F13: `samsung_f13_ar_fallback.png` shows typed `ArAvailabilityChecker` detecting non-ARCore chipset gracefully, displaying `2D Camera Fallback Active` and zero crashes.
-  - Feature Clarification: Accurately described and implemented as a high-contrast camera-view overlay with live ARCore surface tracking and diagnostics, rather than claiming false 3D anchor stabilization.
-  - Preserved 2D fallback and offline compliance: Seamless bidirectional switching to Screen S07 `MedicineResultScreen`; zero network permissions in merged manifest (`android.permission.INTERNET` and `ACCESS_NETWORK_STATE` strictly absent).
-- Automated tests: Total 47 unit tests passed in `.\gradlew.bat test`.
-- Build verification: `.\gradlew.bat assembleDebug` succeeded cleanly (debug APK: 56,361,256 bytes).
+- Physical device verification on primary target hardware:
+  - **Samsung Galaxy F13** (SM-E135F / m13dd, Android 14 / API 34, ADB ID `RZ8WA00694L`):
+    - Debug APK built and installed cleanly via ADB.
+    - Full end-to-end user journey executed live:
+      - S01 Welcome screen with Academic Prototype Notice (`samsung_f13_p8_launch.png`).
+      - S03 Framing guidance with actionable instructions (`samsung_f13_p8_screen2.png`).
+      - S04 CameraX live scan with hardware camera preview and framing brackets (`samsung_f13_p8_camera.png`).
+      - Live physical medicine scanning: User placed an actual physical blister strip of "Omez Omeprazole Capsules IP 20 mg" under the camera (`samsung_f13_p8_back_camera.png`).
+      - S07 Accessible Medicine Result: Recognized "CONFIRMED CATALOGUE MATCH: Omez 20 mg Capsule" with active ingredient "Omeprazole", dosage form "Capsule", manufacturer "Dr. Reddy's Laboratories Ltd", purpose, directions, warnings, and side effects (`samsung_f13_p8_omez_result.png`).
+      - Physical package attributes honestly reported as "Not detected on label" without fabrication (`samsung_f13_p8_scrolled.png`).
+      - Voice guidance controls: "Speak", "Stop", and "Repeat" buttons render with full labels, high contrast, and zero clipping (`samsung_f13_p8_omez_result.png`).
+      - Android TextToSpeech: Connected to Samsung's native on-device TTS engine (`com.samsung.SMT`) verified via logcat (`TextToSpeech: Connected to TTS engine`).
+      - AR 2D Fallback: Gracefully detected unsupported ARCore hardware on Exynos 850 chipset and displayed "2D Camera Fallback Active" card with one-tap "Switch to 2D Result" button (`samsung_f13_p8_ar_fallback.png`).
+      - Fallback return: Tapped "Switch to 2D Result"; returned immediately to 2D monograph without crash or session leak (`samsung_f13_p8_back_to_2d.png`).
+      - Back navigation and re-scan: Tapped back arrow in top bar; returned to live camera feed ready for next scan (`samsung_f13_p8_back_camera.png`).
+  - **Redmi Note 11** (2201117TI / spes_in, Android 13 / API 33, ADB ID `79145af9`): Live OpenGL camera background and AR tracking loop previously verified in Phase 7.
+- Lifecycle hardening across app components:
+  - `PermissionScreen`: Attached `LifecycleEventObserver` listening for `ON_RESUME`. When user returns from Android System Settings after granting camera permission, immediately transitions to Scan Guidance without requiring app restart.
+  - `MedicineResultScreen`: Attached `LifecycleEventObserver` listening for `ON_PAUSE`. Halts active TTS speech (`ttsManager.stop()`) immediately when the app is backgrounded, minimized, or screen locked, preventing runaway audio leaks.
+  - `ArOverlayScreen`: Attached `LifecycleEventObserver` listening for `ON_PAUSE`/`ON_RESUME`/`ON_DESTROY`. Halts `surfaceViewRef?.onPause()` and `arSessionManager.pause()` on pause; safely resumes on resume only if active; safely releases native ARCore resources on disposal.
+  - S07 AR Button: Dynamically checks `ArAvailabilityChecker.isSupported(context)` and appends `(2D Fallback)` hint if the device lacks ARCore support (e.g. Samsung Galaxy F13), providing clear feedback before tapping.
+- Enhanced `TextNormaliser`:
+  - `EXPIRY_REGEX` updated to support `EXP.DATE`, `USE BEFORE`, and varying spacing/punctuation.
+  - `BATCH_REGEX` updated to support hyphens in batch codes (e.g. `LOT-9982`, `XF-201`).
+- Automated regression test suite:
+  - Created `app/src/test/java/com/armod/identifier/edgecases/Phase8EdgeCaseTest.kt` (17 test cases, 64 total unit tests across 8 suites).
+  - All 64 unit tests pass in `.\gradlew.bat test`.
+- Strict offline compliance:
+  - Verified merged manifest at `app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`.
+  - Confirmed `android.permission.INTERNET` and `android.permission.ACCESS_NETWORK_STATE` are strictly absent. Zero network traffic possible.
 
 **Partially implemented:**
-- None for Phase 7.
+- None for Phase 8.
 
 **Not yet implemented:**
-- Phases 8–9: UI polish, integration, edge cases, and end-to-end handoff testing.
+- Phase 9: End-to-end testing and prototype handoff (pending user approval).
 
 **Build and test status:**
-- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 26s (artifact: `app/build/outputs/apk/debug/app-debug.apk`, 56,361,256 bytes)
-- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 39s (47 unit tests passed across 7 test classes; 0 failures)
-- Device launch & physical test: Fully verified on primary target device Samsung Galaxy F13 (Android 14 / API 34) and development device Redmi Note 11 (Android 13 / API 33).
-- Live AR camera background and tracking: Verified on physical device (`screen_ar_live_overlay2.png`).
-- 2D accessible fallback: Verified on Samsung Galaxy F13 (`samsung_f13_ar_fallback.png` and `samsung_f13_result.png`).
+- Build command/result: `.\gradlew.bat assembleDebug` -> BUILD SUCCESSFUL in 30s (artifact: `app/build/outputs/apk/debug/app-debug.apk`)
+- Unit tests/result: `.\gradlew.bat test` -> BUILD SUCCESSFUL in 37s (64 unit tests passed across 8 test classes; 0 failures)
+- Merged manifest: Verified zero network permissions (`INTERNET` and `ACCESS_NETWORK_STATE` strictly absent)
+- Device launch & physical test: Fully verified end-to-end on target device Samsung Galaxy F13 (Android 14 / API 34).
 
-**Current task in progress:** `Samsung Galaxy F13 updated and running latest build; ready for Phase 8.`
+**Current task in progress:** `Phase 8 complete. Ready for Phase 9 upon user approval.`
 
 **Known issues / blockers:**
 - Samsung Galaxy F13 does not support ARCore (Exynos 850); 2D fallback is active, verified, and serves as the primary mode on Galaxy F13.
 - CPU virtualization remains disabled in laptop BIOS (physical USB testing on Samsung F13 is primary).
 
-**Most recent change:** `Installed and launched latest build on primary target device Samsung Galaxy F13 (Android 14 / API 34). Verified Welcome Screen, S07 Result Screen, and 2D fallback.`
+**Most recent change:** `Completed Phase 8 integration, lifecycle hardening, edge-case testing, and live physical device verification on Samsung Galaxy F13.`
 
-**Next step:** `Await user instruction to proceed with Phase 8 (UI polish, integration, and edge cases).`
+**Next step:** `Await user instruction to proceed with Phase 9 (End-to-end testing and prototype handoff).`
 
 ## 6. Session Log
 
-### 2026-10-18 — Phase 7 Acceptance Review: Live AR Camera Background and Dynamic Tracking (Verified on Redmi Note 11)
-- Goal: Audit Phase 7 implementation, verify real AR camera feed and tracking vs static UI, implement OpenGL ES 2.0 camera rendering pipeline, eliminate Compose SurfaceView occlusion, verify on physical Redmi Note 11 hardware, and maintain 100% offline compliance.
-- Files changed: `app/src/main/java/com/armod/identifier/ar/ArCameraSurfaceView.kt`, `app/src/main/java/com/armod/identifier/ar/ArSessionManager.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ArOverlayScreen.kt`, `app/src/main/java/com/armod/identifier/MainActivity.kt`, `DECISIONS.md`, `TASKS.md`, `MEMORY.md`.
+### 2026-10-22 — Phase 8: Integration, UI Polish, Lifecycle Hardening, and Edge-Case Testing (Verified on Samsung Galaxy F13)
+- Goal: Stabilize and integrate existing features (CameraX scanning, ML Kit OCR, conservative matching, S06/S07 screens, TextToSpeech, AR overlay with 2D fallback), harden component lifecycles, test and fix critical edge cases, build automated regression tests, maintain 100% offline compliance, and verify end-to-end on target hardware Samsung Galaxy F13.
+- Files changed: `app/src/main/java/com/armod/identifier/ui/screens/PermissionScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/MedicineResultScreen.kt`, `app/src/main/java/com/armod/identifier/ui/screens/ArOverlayScreen.kt`, `app/src/main/java/com/armod/identifier/util/TextNormaliser.kt`, `app/src/test/java/com/armod/identifier/edgecases/Phase8EdgeCaseTest.kt`, `DECISIONS.md`, `TASKS.md`, `MEMORY.md`.
 - Implemented and verified:
-  - Audit: Determined that previous implementation initialized ARCore session but lacked an OpenGL texture rendering pipeline (`GLSurfaceView` with `GL_TEXTURE_EXTERNAL_OES`), resulting in an empty dark background and static tracking label.
-  - Implemented `ArCameraSurfaceView` and `ArCameraRenderer`: Full-screen quad using OpenGL ES 2.0 with external OES texture, registered with `session.setCameraTextureName(textureId)`, invoking `session.update()` on every frame in `onDrawFrame`, transforming UV coordinates via `frame.transformCoordinates2d`, and dispatching live frame tracking states to Compose.
-  - Resolved Compose SurfaceView Occlusion: Set `setZOrderMediaOverlay(true)` and replaced root `Surface` with `Box` in `MainActivity.kt` to avoid Compose's `CompositingStrategy.Offscreen` blocking native SurfaceView hole-punching.
-  - Fixed typo in string resource reference (`switch_to_2d_result` -> `ar_view_2d_result`).
-  - Unit tests: `.\gradlew.bat test` (47/47 unit tests passed across 7 test suites).
-  - Merged manifest: Verified zero network permissions (`INTERNET` and `ACCESS_NETWORK_STATE` strictly absent).
-  - Build: `.\gradlew.bat assembleDebug` (56,361,256 bytes APK).
-  - Physical device verification on Redmi Note 11 (ADB ID `79145af9`):
-    - Physical screenshot `screen_ar_live_overlay2.png`: Live camera view is clearly visible behind semi-translucent Compose overlay cards showing real physical desk and keyboard.
-    - Verified dynamic ARCore SLAM VIO tracking: When facing dark surface, tracking pill dynamically showed "Low lighting: improve illumination" (`screen_ar_live_camera.png`); when pointed into room, dynamically recovered to green "AR Tracking Active".
-    - Verified bidirectional navigation between AR overlay and S07 2D Result screen.
-- Decisions made: D-027 (OpenGL ES 2.0 Live Camera Background Rendering and Real-Time ARCore VIO Tracking for AR Overlay Screen).
-- Next step: Await explicit user approval before starting Phase 7.
+  - Lifecycle hardening:
+    - Added `LifecycleEventObserver` in `PermissionScreen` on `ON_RESUME` to detect permission grant when returning from Android System Settings.
+    - Added `LifecycleEventObserver` in `MedicineResultScreen` on `ON_PAUSE` to immediately halt active TTS playback on app background/screen lock.
+    - Added `LifecycleEventObserver` in `ArOverlayScreen` on `ON_PAUSE`/`ON_RESUME`/`ON_DESTROY` to pause SurfaceView and AR session, resume safely, and release native resources on disposal.
+    - Dynamic S07 AR button text checking `ArAvailabilityChecker.isSupported(context)` displaying `(2D Fallback)` hint on unsupported hardware.
+  - Normalizer enhancements:
+    - Updated `EXPIRY_REGEX` in `TextNormaliser` to support `EXP.DATE` and `USE BEFORE`.
+    - Updated `BATCH_REGEX` in `TextNormaliser` to support hyphenated batch codes (`LOT-9982`, `XF-201`).
+  - Edge-case regression test suite:
+    - Added `Phase8EdgeCaseTest.kt` with 17 test cases covering blank/noise/garbled OCR, conflicting strength, multi-strength generic ambiguity, missing batch/expiry, uncatalogued medicine, TTS content safety, and ARCore fallback mappings.
+    - `.\gradlew.bat test`: All 64 unit tests pass in 37s.
+  - Zero-network verification:
+    - Merged manifest inspected: `android.permission.INTERNET` and `ACCESS_NETWORK_STATE` strictly absent.
+  - Build output:
+    - `.\gradlew.bat assembleDebug`: BUILD SUCCESSFUL in 30s.
+  - Physical device verification on Samsung Galaxy F13 (`SM-E135F` / `m13dd`, Android 14 / API 34, ADB ID `RZ8WA00694L`):
+    - App installed via ADB stream install and launched cleanly.
+    - Welcome screen (`samsung_f13_p8_launch.png`) -> Guidance screen (`samsung_f13_p8_screen2.png`) -> CameraX live preview (`samsung_f13_p8_camera.png`).
+    - Live physical medicine scan: Tested with real blister pack of "Omez 20mg Capsule" (`samsung_f13_p8_back_camera.png`).
+    - Recognized "CONFIRMED CATALOGUE MATCH: Omez 20 mg Capsule" with complete monograph, honest reporting of missing package attributes, and full voice guidance controls (`samsung_f13_p8_omez_result.png`).
+    - TTS audio verified bound and connected to Samsung's native TTS engine (`com.samsung.SMT`).
+    - AR 2D Fallback verified: detected Exynos 850 lack of ARCore support and rendered "2D Camera Fallback Active" card with one-tap return to 2D result screen (`samsung_f13_p8_ar_fallback.png`, `samsung_f13_p8_back_to_2d.png`).
+    - Back navigation and re-scan loop verified without session leaks or crashes.
+- Decisions made: D-028 (End-to-End Integration, Lifecycle Hardening, and Edge-Case Recovery).
+- Next step: Await explicit user approval before starting Phase 9.
 
 ### 2026-10-17 — Phase 6: Accessible Results and Voice Guidance (Verified on Redmi Note 11)
 - Goal: Implement accessible result screen S07, integrate Android TextToSpeech with lifecycle management and Speak/Stop/Repeat controls, generate spoken content from typed matching outcomes, and verify on physical hardware.
